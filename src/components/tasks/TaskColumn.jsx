@@ -3,7 +3,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { motion } from 'framer-motion';
 import TaskCard from './TaskCard';
 
-function TaskColumn({ column, tasks, onTaskClick, onTaskEdit }) {
+function TaskColumn({ column, tasks, onTaskClick, onTaskEdit, onTaskDelete }) {
   const { setNodeRef, isOver } = useDroppable({
     id: column.id,
   });
@@ -30,9 +30,10 @@ function TaskColumn({ column, tasks, onTaskClick, onTaskEdit }) {
             task={task}
             onClick={onTaskClick}
             onEdit={onTaskEdit}
+            onDelete={onTaskDelete}
           />
         ))}
-
+        
         {tasks.length === 0 && (
           <motion.div
             initial={{ opacity: 0 }}

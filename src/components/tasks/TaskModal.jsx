@@ -14,6 +14,7 @@ function TaskModal({ task, onClose }) {
   const [assignee, setAssignee] = useState(task?.assignee || '');
   const [dueDate, setDueDate] = useState(task?.dueDate || '');
   const [status, setStatus] = useState(task?.status || 'todo');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (task) {
@@ -48,6 +49,11 @@ function TaskModal({ task, onClose }) {
     onClose();
   };
 
+  const handleDelete = () => {
+    dispatch({ type: 'DELETE_TASK', taskId: task.id });
+    onClose();
+  };
+
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       handleSave(e);
@@ -74,12 +80,22 @@ function TaskModal({ task, onClose }) {
           <h2 className="text-xl font-bold text-white">
             {task ? 'Edit Task' : 'New Task'}
           </h2>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-700 rounded-xl transition-colors"
-          >
-            <SafeIcon icon={FiX} className="w-5 h-5 text-gray-400" />
-          </button>
+          <div className="flex items-center space-x-2">
+            {task && (
+              <button
+                onClick={() => setShowDeleteConfirm(true)}
+                className="p-2 hover:bg-gray-700 rounded-xl transition-colors"
+              >
+                <SafeIcon icon={FiTrash2} className="w-5 h-5 text-red-400" />
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-700 rounded-xl transition-colors"
+            >
+              <SafeIcon icon={FiX} className="w-5 h-5 text-gray-400" />
+            </button>
+          </div>
         </div>
 
         <form onSubmit={handleSave} className="p-6 space-y-6">
@@ -181,6 +197,40 @@ function TaskModal({ task, onClose }) {
             </div>
           </div>
         </form>
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute inset-0 bg-gray-900/90 backdrop-blur-sm flex items-center justify-center p-6"
+          >
+            <motion.div
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              className="bg-gray-800 rounded-2xl p-6 max-w-sm w-full border border-gray-700"
+            >
+              <h3 className="text-lg font-bold text-white mb-2">Delete Task</h3>
+              <p className="text-gray-400 mb-6">
+                Are you sure you want to delete <strong>{task?.title}</strong>? This action cannot be undone.
+              </p>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
       </motion.div>
     </motion.div>
   );

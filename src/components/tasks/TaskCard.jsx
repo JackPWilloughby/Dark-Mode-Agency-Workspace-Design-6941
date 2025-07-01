@@ -6,9 +6,9 @@ import { format, isAfter, isBefore, startOfDay } from 'date-fns';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../../common/SafeIcon';
 
-const { FiCalendar, FiUser, FiMessageSquare, FiClock, FiEdit3 } = FiIcons;
+const { FiCalendar, FiUser, FiMessageSquare, FiClock, FiEdit3, FiTrash2 } = FiIcons;
 
-function TaskCard({ task, onClick, onEdit, isDragging = false }) {
+function TaskCard({ task, onClick, onEdit, onDelete, isDragging = false }) {
   const {
     attributes,
     listeners,
@@ -24,9 +24,9 @@ function TaskCard({ task, onClick, onEdit, isDragging = false }) {
   };
 
   const today = startOfDay(new Date());
-  const dueDate = new Date(task.dueDate);
-  const isOverdue = isBefore(dueDate, today);
-  const isDueToday = format(dueDate, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd');
+  const dueDate = task.dueDate ? new Date(task.dueDate) : null;
+  const isOverdue = dueDate && isBefore(dueDate, today);
+  const isDueToday = dueDate && format(dueDate, 'yyyy-MM-dd') === format(today, 'yyyy-MM-dd');
 
   const getDueDateColor = () => {
     if (isOverdue) return 'text-red-400 bg-red-400/10';
@@ -57,6 +57,14 @@ function TaskCard({ task, onClick, onEdit, isDragging = false }) {
     onEdit(task);
   };
 
+  // Handle delete click
+  const handleDeleteClick = (e) => {
+    e.stopPropagation();
+    if (onDelete) {
+      onDelete(task);
+    }
+  };
+
   return (
     <motion.div
       ref={setNodeRef}
@@ -64,21 +72,33 @@ function TaskCard({ task, onClick, onEdit, isDragging = false }) {
       {...attributes}
       {...listeners}
       className={`bg-gray-750 hover:bg-gray-700 border-l-4 ${getStatusColor()} rounded-2xl p-4 cursor-pointer transition-all duration-200 group relative ${
-        isDragging || isSortableDragging ? 'opacity-50 shadow-2xl scale-105' : 'hover:shadow-lg backdrop-blur-sm'
+        isDragging || isSortableDragging 
+          ? 'opacity-50 shadow-2xl scale-105' 
+          : 'hover:shadow-lg backdrop-blur-sm'
       }`}
       whileHover={{ y: -2 }}
       layout
     >
-      {/* Edit button */}
-      <button
-        onClick={handleEditClick}
-        className="absolute top-3 right-3 p-1.5 opacity-0 group-hover:opacity-100 hover:bg-gray-600 rounded-lg transition-all z-10"
-      >
-        <SafeIcon icon={FiEdit3} className="w-3.5 h-3.5 text-gray-400 hover:text-blue-400" />
-      </button>
+      {/* Action buttons */}
+      <div className="absolute top-3 right-3 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+        <button
+          onClick={handleEditClick}
+          className="p-1.5 hover:bg-gray-600 rounded-lg transition-all"
+        >
+          <SafeIcon icon={FiEdit3} className="w-3.5 h-3.5 text-gray-400 hover:text-blue-400" />
+        </button>
+        {onDelete && (
+          <button
+            onClick={handleDeleteClick}
+            className="p-1.5 hover:bg-gray-600 rounded-lg transition-all"
+          >
+            <SafeIcon icon={FiTrash2} className="w-3.5 h-3.5 text-gray-400 hover:text-red-400" />
+          </button>
+        )}
+      </div>
 
       {/* Clickable area for comments */}
-      <div onClick={handleCommentsClick} className="space-y-3 cursor-pointer pr-8">
+      <div onClick={handleCommentsClick} className="space-y-3 cursor-pointer pr-16">
         <h4 className="font-medium text-white group-hover:text-blue-400 transition-colors line-clamp-2">
           {task.title}
         </h4>

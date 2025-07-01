@@ -7,13 +7,14 @@ import AddContactModal from './AddContactModal';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../../common/SafeIcon';
 
-const { FiX, FiMail, FiPhone, FiBuilding, FiSend, FiEdit3 } = FiIcons;
+const { FiX, FiMail, FiPhone, FiBuilding, FiSend, FiEdit3, FiTrash2 } = FiIcons;
 
 function ContactPanel({ contact, onClose }) {
   const { state, dispatch } = useApp();
   const { profile } = useAuth();
   const [newNote, setNewNote] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const currentUser = profile?.full_name || 'You';
   const currentContact = state.contacts.find(c => c.id === contact.id) || contact;
@@ -41,6 +42,14 @@ function ContactPanel({ contact, onClose }) {
     setShowEditModal(true);
   };
 
+  const handleDeleteContact = () => {
+    dispatch({
+      type: 'DELETE_CONTACT',
+      contactId: contact.id
+    });
+    onClose();
+  };
+
   return (
     <>
       <motion.div
@@ -58,6 +67,12 @@ function ContactPanel({ contact, onClose }) {
               className="p-2 hover:bg-gray-700 rounded-xl transition-colors"
             >
               <SafeIcon icon={FiEdit3} className="w-5 h-5 text-gray-400" />
+            </button>
+            <button
+              onClick={() => setShowDeleteConfirm(true)}
+              className="p-2 hover:bg-gray-700 rounded-xl transition-colors"
+            >
+              <SafeIcon icon={FiTrash2} className="w-5 h-5 text-red-400" />
             </button>
             <button
               onClick={onClose}
@@ -156,6 +171,40 @@ function ContactPanel({ contact, onClose }) {
             </div>
           </div>
         </div>
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute inset-0 bg-black/80 flex items-center justify-center p-4 z-50"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="bg-gray-800 rounded-2xl p-6 max-w-sm w-full border border-gray-700"
+            >
+              <h3 className="text-lg font-bold text-white mb-2">Delete Contact</h3>
+              <p className="text-gray-400 mb-6">
+                Are you sure you want to delete {currentContact.name}? This action cannot be undone.
+              </p>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteContact}
+                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
       </motion.div>
 
       {showEditModal && (

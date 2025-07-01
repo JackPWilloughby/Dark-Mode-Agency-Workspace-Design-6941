@@ -23,7 +23,8 @@ const fallbackData = {
       author: 'System',
       content: 'Welcome to PulseHQ! Start by creating tasks and adding team members.',
       timestamp: new Date().toISOString(),
-      edited: false
+      edited: false,
+      deleted: false
     }
   ],
   teamMembers: [
@@ -44,7 +45,7 @@ const initialState = {
   chatMessages: [],
   teamMembers: [],
   typingUsers: [],
-  isLoading: false, // Start with false for immediate loading
+  isLoading: false,
   error: null,
   isOffline: false
 };
@@ -78,8 +79,12 @@ function appReducer(state, action) {
     
     case 'ADD_TASK':
       const newTask = { 
-        ...action.task, 
-        id: action.task.id || Date.now().toString(),
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        title: action.task.title,
+        description: action.task.description || '',
+        status: action.task.status || 'todo',
+        assignee: action.task.assignee || '',
+        dueDate: action.task.dueDate || '',
         comments: action.task.comments || []
       };
       return {
@@ -95,6 +100,12 @@ function appReducer(state, action) {
         )
       };
     
+    case 'DELETE_TASK':
+      return {
+        ...state,
+        tasks: state.tasks.filter(task => task.id !== action.taskId)
+      };
+    
     case 'ADD_TASK_COMMENT':
       return {
         ...state,
@@ -105,7 +116,7 @@ function appReducer(state, action) {
                 comments: [
                   ...(task.comments || []),
                   {
-                    id: Date.now().toString(),
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
                     author: action.author,
                     content: action.content,
                     timestamp: new Date().toISOString()
@@ -118,8 +129,12 @@ function appReducer(state, action) {
     
     case 'ADD_CONTACT':
       const newContact = { 
-        ...action.contact, 
-        id: action.contact.id || Date.now().toString(),
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        name: action.contact.name,
+        email: action.contact.email,
+        phone: action.contact.phone || '',
+        company: action.contact.company,
+        status: action.contact.status,
         notes: action.contact.notes || []
       };
       return {
@@ -135,6 +150,12 @@ function appReducer(state, action) {
         )
       };
     
+    case 'DELETE_CONTACT':
+      return {
+        ...state,
+        contacts: state.contacts.filter(contact => contact.id !== action.contactId)
+      };
+    
     case 'ADD_CONTACT_NOTE':
       return {
         ...state,
@@ -145,7 +166,7 @@ function appReducer(state, action) {
                 notes: [
                   ...(contact.notes || []),
                   {
-                    id: Date.now().toString(),
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
                     content: action.content,
                     timestamp: new Date().toISOString(),
                     author: action.author
@@ -162,11 +183,12 @@ function appReducer(state, action) {
         chatMessages: [
           ...state.chatMessages,
           {
-            id: Date.now().toString(),
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
             author: action.author,
             content: action.content,
             timestamp: new Date().toISOString(),
-            edited: false
+            edited: false,
+            deleted: false
           }
         ]
       };
@@ -181,10 +203,24 @@ function appReducer(state, action) {
         )
       };
     
+    case 'DELETE_CHAT_MESSAGE':
+      return {
+        ...state,
+        chatMessages: state.chatMessages.map(msg =>
+          msg.id === action.messageId
+            ? { ...msg, deleted: true, content: '' }
+            : msg
+        )
+      };
+    
     case 'ADD_TEAM_MEMBER':
       const newMember = { 
-        ...action.member, 
-        id: action.member.id || Date.now().toString()
+        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+        name: action.member.name,
+        email: action.member.email,
+        role: action.member.role,
+        avatar: action.member.avatar,
+        status: action.member.status || 'online'
       };
       return {
         ...state,
@@ -240,7 +276,8 @@ export function AppProvider({ children }) {
         author: 'System',
         content: `Welcome ${user.email?.split('@')[0] || 'User'}! Your workspace is ready.`,
         timestamp: new Date().toISOString(),
-        edited: false
+        edited: false,
+        deleted: false
       }];
     }
 

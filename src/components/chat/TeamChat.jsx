@@ -62,6 +62,13 @@ function TeamChat() {
     setEditingContent('');
   };
 
+  const handleDeleteMessage = (messageId) => {
+    dispatch({
+      type: 'DELETE_CHAT_MESSAGE',
+      messageId: messageId
+    });
+  };
+
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -79,7 +86,7 @@ function TeamChat() {
     if (e.key === 'ArrowUp' && !message && !editingMessageId) {
       const lastUserMessage = [...state.chatMessages]
         .reverse()
-        .find(msg => msg.author === currentUser);
+        .find(msg => msg.author === currentUser && !msg.deleted);
       if (lastUserMessage) {
         handleEditMessage(lastUserMessage.id, lastUserMessage.content);
       }
@@ -93,6 +100,7 @@ function TeamChat() {
           <h1 className="text-xl sm:text-2xl font-bold text-white">Team Chat</h1>
           <p className="text-gray-400 mt-1 text-sm sm:text-base">Real-time collaboration space</p>
         </div>
+        
         <div className="flex items-center space-x-2">
           {state.teamMembers.map((member) => (
             <div key={member.id} className="relative">
@@ -122,6 +130,7 @@ function TeamChat() {
               onEdit={handleEditMessage}
               onSaveEdit={handleSaveEdit}
               onCancelEdit={handleCancelEdit}
+              onDelete={handleDeleteMessage}
             />
           ))}
         </AnimatePresence>
@@ -129,6 +138,7 @@ function TeamChat() {
         {state.typingUsers.length > 0 && (
           <TypingIndicator users={state.typingUsers} />
         )}
+
         <div ref={messagesEndRef} />
       </div>
 

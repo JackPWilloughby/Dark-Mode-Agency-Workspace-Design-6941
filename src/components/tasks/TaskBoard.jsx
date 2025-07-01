@@ -24,6 +24,8 @@ function TaskBoard() {
   const [selectedTask, setSelectedTask] = useState(null);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showCommentsModal, setShowCommentsModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [taskToDelete, setTaskToDelete] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
   // Configure sensors to require minimum distance for drag
@@ -55,11 +57,7 @@ function TaskBoard() {
     const newStatus = over.id;
 
     if (state.tasks.find(t => t.id === taskId)?.status !== newStatus) {
-      dispatch({
-        type: 'MOVE_TASK',
-        taskId,
-        newStatus
-      });
+      dispatch({ type: 'MOVE_TASK', taskId, newStatus });
     }
   };
 
@@ -76,6 +74,19 @@ function TaskBoard() {
   const handleTaskComments = (task) => {
     setSelectedTask(task);
     setShowCommentsModal(true);
+  };
+
+  const handleTaskDelete = (task) => {
+    setTaskToDelete(task);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteTask = () => {
+    if (taskToDelete) {
+      dispatch({ type: 'DELETE_TASK', taskId: taskToDelete.id });
+      setTaskToDelete(null);
+      setShowDeleteConfirm(false);
+    }
   };
 
   const handleCloseModal = () => {
@@ -138,6 +149,7 @@ function TaskBoard() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 h-full">
             {columns.map((column) => {
               const columnTasks = filteredTasks.filter(task => task.status === column.id);
+              
               return (
                 <SortableContext
                   key={column.id}
@@ -150,6 +162,7 @@ function TaskBoard() {
                     tasks={columnTasks}
                     onTaskClick={handleTaskComments}
                     onTaskEdit={handleTaskEdit}
+                    onTaskDelete={handleTaskDelete}
                   />
                 </SortableContext>
               );
@@ -168,6 +181,44 @@ function TaskBoard() {
           )}
         </DragOverlay>
       </DndContext>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-gray-800 rounded-2xl p-6 max-w-sm w-full border border-gray-700"
+            >
+              <h3 className="text-lg font-bold text-white mb-2">Delete Task</h3>
+              <p className="text-gray-400 mb-6">
+                Are you sure you want to delete "{taskToDelete?.title}"? This action cannot be undone.
+              </p>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="flex-1 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-xl transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDeleteTask}
+                  className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors"
+                >
+                  Delete
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showTaskModal && (
