@@ -7,15 +7,8 @@ function LoadingScreen() {
       <div className="text-center">
         <motion.div
           className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6"
-          animate={{
-            scale: [1, 1.1, 1],
-            rotate: [0, 180, 360]
-          }}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
+          animate={{ scale: [1, 1.1, 1], rotate: [0, 180, 360] }}
+          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
         >
           <span className="text-white font-bold text-2xl">P</span>
         </motion.div>
@@ -28,15 +21,8 @@ function LoadingScreen() {
             <motion.div
               key={i}
               className="w-3 h-3 bg-blue-500 rounded-full"
-              animate={{
-                y: [-10, 0, -10],
-                opacity: [0.5, 1, 0.5]
-              }}
-              transition={{
-                duration: 1.5,
-                repeat: Infinity,
-                delay: i * 0.2
-              }}
+              animate={{ y: [-10, 0, -10], opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 1.5, repeat: Infinity, delay: i * 0.2 }}
             />
           ))}
         </div>

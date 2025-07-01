@@ -14,7 +14,6 @@ function TaskModal({ task, onClose }) {
   const [assignee, setAssignee] = useState(task?.assignee || '');
   const [dueDate, setDueDate] = useState(task?.dueDate || '');
   const [status, setStatus] = useState(task?.status || 'todo');
-  const [newComment, setNewComment] = useState('');
 
   useEffect(() => {
     if (task) {
@@ -26,10 +25,14 @@ function TaskModal({ task, onClose }) {
     }
   }, [task]);
 
-  const handleSave = () => {
+  const handleSave = (e) => {
+    e.preventDefault();
+    
+    if (!title.trim()) return;
+
     const taskData = {
-      title,
-      description,
+      title: title.trim(),
+      description: description.trim(),
       assignee,
       dueDate,
       status,
@@ -41,24 +44,13 @@ function TaskModal({ task, onClose }) {
     } else {
       dispatch({ type: 'ADD_TASK', task: taskData });
     }
-    
-    onClose();
-  };
 
-  const handleAddComment = () => {
-    if (newComment.trim() && task) {
-      dispatch({ type: 'ADD_TASK_COMMENT', taskId: task.id, content: newComment.trim() });
-      setNewComment('');
-    }
+    onClose();
   };
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-      if (newComment.trim()) {
-        handleAddComment();
-      } else {
-        handleSave();
-      }
+      handleSave(e);
     }
   };
 
@@ -90,7 +82,7 @@ function TaskModal({ task, onClose }) {
           </button>
         </div>
 
-        <div className="p-6 space-y-6 max-h-[calc(90vh-140px)] overflow-y-auto">
+        <form onSubmit={handleSave} className="p-6 space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
               Task Title
@@ -99,9 +91,11 @@ function TaskModal({ task, onClose }) {
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              onKeyPress={handleKeyPress}
               className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
               placeholder="Enter task title..."
               autoFocus
+              required
             />
           </div>
 
@@ -165,64 +159,28 @@ function TaskModal({ task, onClose }) {
             </div>
           </div>
 
-          {task && task.comments && (
-            <div>
-              <h3 className="text-lg font-semibold text-white mb-4">Comments</h3>
-              <div className="space-y-3 mb-4">
-                {task.comments.map((comment) => (
-                  <div key={comment.id} className="bg-gray-700 rounded-xl p-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <span className="font-medium text-white">{comment.author}</span>
-                      <span className="text-xs text-gray-400">
-                        {format(new Date(comment.timestamp), 'MMM d, h:mm a')}
-                      </span>
-                    </div>
-                    <p className="text-gray-300">{comment.content}</p>
-                  </div>
-                ))}
-              </div>
-              
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  className="flex-1 px-4 py-3 bg-gray-700 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-blue-500"
-                  placeholder="Add a comment..."
-                />
-                <button
-                  onClick={handleAddComment}
-                  disabled={!newComment.trim()}
-                  className="px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded-xl transition-colors"
-                >
-                  <SafeIcon icon={FiSend} className="w-4 h-4" />
-                </button>
-              </div>
+          <div className="flex items-center justify-between pt-4">
+            <div className="text-xs text-gray-400">
+              Press Cmd/Ctrl + Enter to save
             </div>
-          )}
-        </div>
-
-        <div className="flex items-center justify-between p-6 border-t border-gray-700">
-          <div className="text-xs text-gray-400">
-            Press Cmd/Ctrl + Enter to save
+            <div className="flex space-x-3">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={!title.trim()}
+                className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded-xl font-medium transition-colors"
+              >
+                {task ? 'Update' : 'Create'} Task
+              </button>
+            </div>
           </div>
-          <div className="flex space-x-3">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={!title.trim()}
-              className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded-xl font-medium transition-colors"
-            >
-              {task ? 'Update' : 'Create'} Task
-            </button>
-          </div>
-        </div>
+        </form>
       </motion.div>
     </motion.div>
   );

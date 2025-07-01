@@ -3,54 +3,25 @@ import { useAuth } from '../hooks/useAuth.jsx';
 
 const AppContext = createContext();
 
-// Enhanced fallback data with more realistic content
+// Minimal fallback data for fast loading
 const fallbackData = {
   tasks: [
     {
       id: '1',
       title: 'Welcome to PulseHQ!',
-      description: 'Start by creating your first real task. You can drag tasks between columns, add comments, and assign team members.',
+      description: 'Create your first task by clicking the New Task button.',
       status: 'todo',
       assignee: '',
       dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      comments: [{
-        id: '1',
-        author: 'System',
-        content: 'Welcome to your new workspace! This is how comments work.',
-        timestamp: new Date().toISOString()
-      }]
-    },
-    {
-      id: '2',
-      title: 'Explore the features',
-      description: 'Check out contacts, team management, and chat functionality.',
-      status: 'doing',
-      assignee: '',
-      dueDate: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       comments: []
     }
   ],
-  contacts: [
-    {
-      id: '1',
-      name: 'Demo Contact',
-      company: 'Example Corp',
-      status: 'Lead',
-      email: 'demo@example.com',
-      phone: '+1 (555) 123-4567',
-      notes: [{
-        id: '1',
-        content: 'This is a sample contact. You can add notes, update status, and track interactions.',
-        timestamp: new Date().toISOString(),
-        author: 'System'
-      }]
-    }
-  ],
+  contacts: [],
   chatMessages: [
     {
       id: '1',
       author: 'System',
-      content: 'Welcome to PulseHQ! This is your team chat. You can edit messages, mention team members, and collaborate in real-time.',
+      content: 'Welcome to PulseHQ! Start by creating tasks and adding team members.',
       timestamp: new Date().toISOString(),
       edited: false
     }
@@ -73,7 +44,7 @@ const initialState = {
   chatMessages: [],
   teamMembers: [],
   typingUsers: [],
-  isLoading: true,
+  isLoading: false, // Start with false for immediate loading
   error: null,
   isOffline: false
 };
@@ -85,9 +56,6 @@ function appReducer(state, action) {
     
     case 'SET_ERROR':
       return { ...state, error: action.payload, isLoading: false };
-    
-    case 'SET_OFFLINE':
-      return { ...state, isOffline: action.payload, isLoading: false };
     
     case 'INITIALIZE_DATA':
       return {
@@ -109,12 +77,14 @@ function appReducer(state, action) {
       };
     
     case 'ADD_TASK':
+      const newTask = { 
+        ...action.task, 
+        id: action.task.id || Date.now().toString(),
+        comments: action.task.comments || []
+      };
       return {
         ...state,
-        tasks: [
-          { ...action.task, id: action.task.id || Date.now().toString() },
-          ...state.tasks
-        ]
+        tasks: [newTask, ...state.tasks]
       };
     
     case 'UPDATE_TASK':
@@ -147,12 +117,14 @@ function appReducer(state, action) {
       };
     
     case 'ADD_CONTACT':
+      const newContact = { 
+        ...action.contact, 
+        id: action.contact.id || Date.now().toString(),
+        notes: action.contact.notes || []
+      };
       return {
         ...state,
-        contacts: [
-          { ...action.contact, id: action.contact.id || Date.now().toString() },
-          ...state.contacts
-        ]
+        contacts: [newContact, ...state.contacts]
       };
     
     case 'UPDATE_CONTACT':
@@ -210,12 +182,13 @@ function appReducer(state, action) {
       };
     
     case 'ADD_TEAM_MEMBER':
+      const newMember = { 
+        ...action.member, 
+        id: action.member.id || Date.now().toString()
+      };
       return {
         ...state,
-        teamMembers: [
-          { ...action.member, id: action.member.id || Date.now().toString() },
-          ...state.teamMembers
-        ]
+        teamMembers: [newMember, ...state.teamMembers]
       };
     
     case 'UPDATE_TEAM_MEMBER':
@@ -244,63 +217,36 @@ export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
   const { user, loading: authLoading } = useAuth();
 
-  // Load initial data
+  // Load initial data immediately
   useEffect(() => {
-    let mounted = true;
-
-    async function loadInitialData() {
-      if (authLoading) {
-        console.log('⏳ Auth still loading...');
-        return;
-      }
-
-      if (!mounted) return;
-
-      try {
-        console.log('📊 Loading workspace data...');
-        dispatch({ type: 'SET_LOADING', payload: true });
-
-        // Always start with fallback data for immediate functionality
-        console.log('✅ Loading fallback data for immediate use');
-        
-        // If user is logged in, update the fallback data with their info
-        let workspaceData = { ...fallbackData };
-        
-        if (user) {
-          // Customize data for logged-in user
-          workspaceData.teamMembers = [{
-            id: '1',
-            name: user.email?.split('@')[0] || 'You',
-            role: 'Team Lead',
-            email: user.email || 'you@example.com',
-            avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
-            status: 'online'
-          }];
-          
-          workspaceData.chatMessages = [{
-            id: '1',
-            author: 'System',
-            content: `Welcome to PulseHQ, ${user.email?.split('@')[0] || 'User'}! Your workspace is ready. Start by creating tasks, adding contacts, and inviting team members.`,
-            timestamp: new Date().toISOString(),
-            edited: false
-          }];
-        }
-
-        dispatch({ type: 'INITIALIZE_DATA', payload: workspaceData });
-        console.log('✅ Workspace loaded successfully');
-
-      } catch (error) {
-        console.error('❌ Error loading workspace:', error);
-        dispatch({ type: 'INITIALIZE_DATA', payload: fallbackData });
-      }
+    console.log('📊 Initializing workspace data...');
+    
+    // Load data immediately - no async delays
+    let workspaceData = { ...fallbackData };
+    
+    if (user) {
+      // Customize data for logged-in user
+      workspaceData.teamMembers = [{
+        id: '1',
+        name: user.email?.split('@')[0] || 'You',
+        role: 'Team Lead',
+        email: user.email || 'you@example.com',
+        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
+        status: 'online'
+      }];
+      
+      workspaceData.chatMessages = [{
+        id: '1',
+        author: 'System',
+        content: `Welcome ${user.email?.split('@')[0] || 'User'}! Your workspace is ready.`,
+        timestamp: new Date().toISOString(),
+        edited: false
+      }];
     }
 
-    loadInitialData();
-
-    return () => {
-      mounted = false;
-    };
-  }, [user, authLoading]);
+    dispatch({ type: 'INITIALIZE_DATA', payload: workspaceData });
+    console.log('✅ Workspace loaded instantly');
+  }, [user]);
 
   return (
     <AppContext.Provider value={{ state, dispatch }}>
