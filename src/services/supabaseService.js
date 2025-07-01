@@ -1,0 +1,347 @@
+import supabase from '../lib/supabase';
+
+class SupabaseService {
+  // Helper method to handle errors gracefully
+  handleError(error, operation) {
+    console.error(`Error in ${operation}:`, error);
+    throw error;
+  }
+
+  // Tasks
+  async getTasks() {
+    try {
+      const { data, error } = await supabase
+        .from('tasks_pulse_2024')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      this.handleError(error, 'getTasks');
+      return [];
+    }
+  }
+
+  async addTask(task) {
+    try {
+      const taskData = {
+        title: task.title,
+        description: task.description || '',
+        status: task.status || 'todo',
+        assignee: task.assignee || '',
+        due_date: task.dueDate || null,
+        comments: task.comments || []
+      };
+
+      const { data, error } = await supabase
+        .from('tasks_pulse_2024')
+        .insert([taskData])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return {
+        id: data.id,
+        title: data.title,
+        description: data.description,
+        status: data.status,
+        assignee: data.assignee,
+        dueDate: data.due_date,
+        comments: data.comments || []
+      };
+    } catch (error) {
+      this.handleError(error, 'addTask');
+    }
+  }
+
+  async updateTask(taskId, updates) {
+    try {
+      const updateData = {
+        title: updates.title,
+        description: updates.description,
+        status: updates.status,
+        assignee: updates.assignee,
+        due_date: updates.dueDate,
+        comments: updates.comments,
+        updated_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
+        .from('tasks_pulse_2024')
+        .update(updateData)
+        .eq('id', taskId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'updateTask');
+    }
+  }
+
+  // Contacts
+  async getContacts() {
+    try {
+      const { data, error } = await supabase
+        .from('contacts_pulse_2024')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      this.handleError(error, 'getContacts');
+      return [];
+    }
+  }
+
+  async addContact(contact) {
+    try {
+      const contactData = {
+        name: contact.name,
+        email: contact.email,
+        phone: contact.phone || '',
+        company: contact.company,
+        status: contact.status,
+        notes: contact.notes || []
+      };
+
+      const { data, error } = await supabase
+        .from('contacts_pulse_2024')
+        .insert([contactData])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return {
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        phone: data.phone,
+        company: data.company,
+        status: data.status,
+        notes: data.notes || []
+      };
+    } catch (error) {
+      this.handleError(error, 'addContact');
+    }
+  }
+
+  async updateContact(contactId, updates) {
+    try {
+      const updateData = {
+        name: updates.name,
+        email: updates.email,
+        phone: updates.phone,
+        company: updates.company,
+        status: updates.status,
+        notes: updates.notes,
+        updated_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
+        .from('contacts_pulse_2024')
+        .update(updateData)
+        .eq('id', contactId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'updateContact');
+    }
+  }
+
+  async addContactNote(contactId, note) {
+    try {
+      // First get the current contact
+      const { data: contact, error: fetchError } = await supabase
+        .from('contacts_pulse_2024')
+        .select('notes')
+        .eq('id', contactId)
+        .single();
+      
+      if (fetchError) throw fetchError;
+      
+      const currentNotes = contact.notes || [];
+      const newNote = {
+        id: Date.now().toString(),
+        content: note.content,
+        timestamp: new Date().toISOString(),
+        author: note.author
+      };
+      
+      const updatedNotes = [...currentNotes, newNote];
+      
+      const { data, error } = await supabase
+        .from('contacts_pulse_2024')
+        .update({ 
+          notes: updatedNotes,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', contactId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'addContactNote');
+    }
+  }
+
+  // Team Members
+  async getTeamMembers() {
+    try {
+      const { data, error } = await supabase
+        .from('team_members_pulse_2024')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      this.handleError(error, 'getTeamMembers');
+      return [];
+    }
+  }
+
+  async addTeamMember(member) {
+    try {
+      const memberData = {
+        name: member.name,
+        email: member.email,
+        role: member.role,
+        avatar: member.avatar,
+        status: member.status || 'online'
+      };
+
+      const { data, error } = await supabase
+        .from('team_members_pulse_2024')
+        .insert([memberData])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return {
+        id: data.id,
+        name: data.name,
+        email: data.email,
+        role: data.role,
+        avatar: data.avatar,
+        status: data.status
+      };
+    } catch (error) {
+      this.handleError(error, 'addTeamMember');
+    }
+  }
+
+  async updateTeamMember(memberId, updates) {
+    try {
+      const updateData = {
+        name: updates.name,
+        email: updates.email,
+        role: updates.role,
+        avatar: updates.avatar,
+        status: updates.status,
+        updated_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
+        .from('team_members_pulse_2024')
+        .update(updateData)
+        .eq('id', memberId)
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'updateTeamMember');
+    }
+  }
+
+  async removeTeamMember(memberId) {
+    try {
+      const { error } = await supabase
+        .from('team_members_pulse_2024')
+        .delete()
+        .eq('id', memberId);
+      
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      this.handleError(error, 'removeTeamMember');
+    }
+  }
+
+  // Chat Messages
+  async getChatMessages() {
+    try {
+      const { data, error } = await supabase
+        .from('chat_messages_pulse_2024')
+        .select('*')
+        .order('created_at', { ascending: true });
+      
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      this.handleError(error, 'getChatMessages');
+      return [];
+    }
+  }
+
+  async addChatMessage(message) {
+    try {
+      const messageData = {
+        author: message.author,
+        content: message.content,
+        edited: false
+      };
+
+      const { data, error } = await supabase
+        .from('chat_messages_pulse_2024')
+        .insert([messageData])
+        .select()
+        .single();
+      
+      if (error) throw error;
+      return {
+        id: data.id,
+        author: data.author,
+        content: data.content,
+        timestamp: data.created_at,
+        edited: data.edited
+      };
+    } catch (error) {
+      this.handleError(error, 'addChatMessage');
+    }
+  }
+
+  // Test connection with better error handling
+  async testConnection() {
+    try {
+      // Use a simple query that should work even with empty tables
+      const { error } = await supabase
+        .from('tasks_pulse_2024')
+        .select('id')
+        .limit(1);
+      
+      if (error) {
+        console.error('Supabase connection test failed:', error);
+        return false;
+      }
+      
+      console.log('✅ Supabase connection successful');
+      return true;
+    } catch (error) {
+      console.error('❌ Supabase connection test error:', error);
+      return false;
+    }
+  }
+}
+
+export default new SupabaseService();

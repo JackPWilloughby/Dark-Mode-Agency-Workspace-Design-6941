@@ -13,7 +13,7 @@ function ContactRow({ contact, onClick, statusColors }) {
 
   return (
     <motion.div
-      onClick={onClick}
+      onClick={() => onClick(contact)}
       className="p-4 hover:bg-gray-700 cursor-pointer transition-colors group"
       whileHover={{ backgroundColor: 'rgba(55, 65, 81, 0.5)' }}
     >
@@ -61,6 +61,12 @@ function ContactRow({ contact, onClick, statusColors }) {
             Latest: {latestNote.content}
           </p>
         )}
+        
+        {contact.notes && contact.notes.length > 0 && (
+          <div className="text-xs text-gray-500">
+            {contact.notes.length} note{contact.notes.length !== 1 ? 's' : ''}
+          </div>
+        )}
       </div>
 
       {/* Desktop Layout */}
@@ -96,7 +102,7 @@ function ContactRow({ contact, onClick, statusColors }) {
             <div className="text-sm min-w-0 flex-1">
               <p className="text-gray-300 truncate">{latestNote.content}</p>
               <p className="text-xs text-gray-500">
-                {format(new Date(latestNote.timestamp), 'MMM d')}
+                {format(new Date(latestNote.timestamp), 'MMM d')} • {contact.notes?.length || 0} notes
               </p>
             </div>
           ) : (

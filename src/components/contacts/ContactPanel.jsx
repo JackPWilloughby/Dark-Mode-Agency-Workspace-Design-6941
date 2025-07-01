@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { useApp } from '../../context/AppContext';
@@ -9,9 +9,12 @@ import SafeIcon from '../../common/SafeIcon';
 const { FiX, FiMail, FiPhone, FiBuilding, FiSend, FiEdit3 } = FiIcons;
 
 function ContactPanel({ contact, onClose }) {
-  const { dispatch } = useApp();
+  const { state, dispatch } = useApp();
   const [newNote, setNewNote] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
+  
+  // Get updated contact from state to reflect real-time changes
+  const currentContact = state.contacts.find(c => c.id === contact.id) || contact;
 
   const handleAddNote = () => {
     if (newNote.trim()) {
@@ -64,44 +67,52 @@ function ContactPanel({ contact, onClose }) {
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
           <div className="text-center">
             <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-xl sm:text-2xl mx-auto mb-4">
-              {contact.name.split(' ').map(n => n[0]).join('').toUpperCase()}
+              {currentContact.name.split(' ').map(n => n[0]).join('').toUpperCase()}
             </div>
-            <h3 className="text-lg sm:text-xl font-bold text-white">{contact.name}</h3>
-            <p className="text-gray-400">{contact.company}</p>
+            <h3 className="text-lg sm:text-xl font-bold text-white">{currentContact.name}</h3>
+            <p className="text-gray-400">{currentContact.company}</p>
             <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-white mt-2 ${
-              contact.status === 'Lead' ? 'bg-yellow-500' :
-              contact.status === 'Prospect' ? 'bg-blue-500' :
-              contact.status === 'Client' ? 'bg-green-500' :
+              currentContact.status === 'Lead' ? 'bg-yellow-500' :
+              currentContact.status === 'Prospect' ? 'bg-blue-500' :
+              currentContact.status === 'Client' ? 'bg-green-500' :
               'bg-gray-500'
             }`}>
-              {contact.status}
+              {currentContact.status}
             </span>
           </div>
 
           <div className="space-y-4">
             <div className="flex items-center space-x-3 text-gray-300">
               <SafeIcon icon={FiMail} className="w-5 h-5 text-gray-400 flex-shrink-0" />
-              <span className="truncate">{contact.email}</span>
+              <span className="truncate">{currentContact.email}</span>
             </div>
             <div className="flex items-center space-x-3 text-gray-300">
               <SafeIcon icon={FiPhone} className="w-5 h-5 text-gray-400 flex-shrink-0" />
-              <span className="truncate">{contact.phone}</span>
+              <span className="truncate">{currentContact.phone}</span>
             </div>
             <div className="flex items-center space-x-3 text-gray-300">
               <SafeIcon icon={FiBuilding} className="w-5 h-5 text-gray-400 flex-shrink-0" />
-              <span className="truncate">{contact.company}</span>
+              <span className="truncate">{currentContact.company}</span>
             </div>
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-4">
               <h4 className="text-base sm:text-lg font-semibold text-white">Notes History</h4>
+              <span className="text-xs text-gray-500">
+                {currentContact.notes ? currentContact.notes.length : 0} notes
+              </span>
             </div>
             
-            <div className="space-y-3 mb-4">
-              {contact.notes && contact.notes.length > 0 ? (
-                contact.notes.map((note) => (
-                  <div key={note.id} className="bg-gray-700 rounded-xl p-3 sm:p-4">
+            <div className="space-y-3 mb-4 max-h-60 overflow-y-auto">
+              {currentContact.notes && currentContact.notes.length > 0 ? (
+                [...currentContact.notes].reverse().map((note) => (
+                  <motion.div 
+                    key={note.id} 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-gray-700 rounded-xl p-3 sm:p-4"
+                  >
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium text-white">{note.author}</span>
                       <span className="text-xs text-gray-400">
@@ -109,28 +120,31 @@ function ContactPanel({ contact, onClose }) {
                       </span>
                     </div>
                     <p className="text-gray-300 text-sm leading-relaxed">{note.content}</p>
-                  </div>
+                  </motion.div>
                 ))
               ) : (
-                <p className="text-gray-500 text-center py-4">No notes yet</p>
+                <div className="text-center py-8 text-gray-500">
+                  <p className="text-sm">No notes yet</p>
+                  <p className="text-xs mt-1">Add your first note below</p>
+                </div>
               )}
             </div>
             
-            <div className="space-y-2">
+            <div className="space-y-3 border-t border-gray-700 pt-4">
               <textarea
                 value={newNote}
                 onChange={(e) => setNewNote(e.target.value)}
                 onKeyPress={handleKeyPress}
                 className="w-full px-4 py-3 bg-gray-700 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:border-blue-500 resize-none"
                 rows={3}
-                placeholder="Add a note..."
+                placeholder="Add a note about this contact..."
               />
               <div className="flex justify-between items-center">
                 <span className="text-xs text-gray-500">Cmd/Ctrl + Enter to send</span>
                 <button
                   onClick={handleAddNote}
                   disabled={!newNote.trim()}
-                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded-xl font-medium transition-colors"
+                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 disabled:opacity-50 text-white rounded-xl font-medium transition-colors"
                 >
                   <SafeIcon icon={FiSend} className="w-4 h-4" />
                   <span>Add Note</span>
@@ -143,7 +157,7 @@ function ContactPanel({ contact, onClose }) {
 
       {showEditModal && (
         <AddContactModal
-          contact={contact}
+          contact={currentContact}
           onClose={() => setShowEditModal(false)}
         />
       )}

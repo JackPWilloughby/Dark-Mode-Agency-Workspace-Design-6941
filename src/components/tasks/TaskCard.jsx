@@ -43,20 +43,34 @@ function TaskCard({ task, onClick, isDragging = false }) {
     }
   };
 
+  // Handle click separately from drag
+  const handleClick = (e) => {
+    // Only trigger click if not dragging
+    if (!isDragging && !isSortableDragging) {
+      e.stopPropagation();
+      onClick(task);
+    }
+  };
+
   return (
     <motion.div
       ref={setNodeRef}
       style={style}
       {...attributes}
       {...listeners}
-      onClick={onClick}
       className={`bg-gray-750 hover:bg-gray-700 border-l-4 ${getStatusColor()} rounded-2xl p-4 cursor-pointer transition-all duration-200 group ${
-        isDragging || isSortableDragging ? 'opacity-50 shadow-2xl scale-105' : 'hover:shadow-lg backdrop-blur-sm'
+        isDragging || isSortableDragging 
+          ? 'opacity-50 shadow-2xl scale-105' 
+          : 'hover:shadow-lg backdrop-blur-sm'
       }`}
       whileHover={{ y: -2 }}
       layout
     >
-      <div className="space-y-3">
+      {/* Clickable overlay for task details */}
+      <div 
+        onClick={handleClick}
+        className="space-y-3 cursor-pointer"
+      >
         <h4 className="font-medium text-white group-hover:text-blue-400 transition-colors line-clamp-2">
           {task.title}
         </h4>
@@ -66,7 +80,7 @@ function TaskCard({ task, onClick, isDragging = false }) {
             {task.description}
           </p>
         )}
-
+        
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             {task.assignee && (
@@ -83,7 +97,7 @@ function TaskCard({ task, onClick, isDragging = false }) {
               </div>
             )}
           </div>
-
+          
           {task.dueDate && (
             <div className={`flex items-center space-x-1 text-xs px-2 py-1 rounded-lg ${getDueDateColor()}`}>
               <SafeIcon icon={isOverdue ? FiClock : FiCalendar} className="w-3 h-3" />

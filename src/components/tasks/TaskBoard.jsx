@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { DndContext, DragOverlay, closestCenter } from '@dnd-kit/core';
+import { DndContext, DragOverlay, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import TaskColumn from './TaskColumn';
 import TaskCard from './TaskCard';
@@ -23,6 +23,15 @@ function TaskBoard() {
   const [selectedTask, setSelectedTask] = useState(null);
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Configure sensors to require minimum distance for drag
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    })
+  );
 
   const filteredTasks = state.tasks.filter(task =>
     task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -54,13 +63,14 @@ function TaskBoard() {
   };
 
   const handleTaskClick = (task) => {
+    console.log('Task clicked:', task); // Debug log
     setSelectedTask(task);
     setShowTaskModal(true);
   };
 
   const handleCloseModal = () => {
     setShowTaskModal(false);
-    setSelectedTask(null);
+    setTimeout(() => setSelectedTask(null), 100);
   };
 
   useEffect(() => {
@@ -108,6 +118,7 @@ function TaskBoard() {
       </div>
 
       <DndContext
+        sensors={sensors}
         collisionDetection={closestCenter}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
