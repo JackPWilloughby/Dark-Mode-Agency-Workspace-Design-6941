@@ -105,6 +105,24 @@ class SupabaseService {
     }
   }
 
+  async deleteTask(taskId) {
+    try {
+      const userId = await this.getCurrentUserId();
+      if (!userId) throw new Error('No user ID');
+
+      const { error } = await supabase
+        .from('tasks_pulse_2024')
+        .delete()
+        .eq('id', taskId)
+        .eq('user_id', userId);
+
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      this.handleError(error, 'deleteTask');
+    }
+  }
+
   // Contacts
   async getContacts() {
     try {
@@ -192,46 +210,21 @@ class SupabaseService {
     }
   }
 
-  async addContactNote(contactId, note) {
+  async deleteContact(contactId) {
     try {
       const userId = await this.getCurrentUserId();
       if (!userId) throw new Error('No user ID');
 
-      // First get the current contact
-      const { data: contact, error: fetchError } = await supabase
+      const { error } = await supabase
         .from('contacts_pulse_2024')
-        .select('notes')
+        .delete()
         .eq('id', contactId)
-        .eq('user_id', userId)
-        .single();
-
-      if (fetchError) throw fetchError;
-
-      const currentNotes = contact.notes || [];
-      const newNote = {
-        id: Date.now().toString(),
-        content: note.content,
-        timestamp: new Date().toISOString(),
-        author: note.author
-      };
-
-      const updatedNotes = [...currentNotes, newNote];
-
-      const { data, error } = await supabase
-        .from('contacts_pulse_2024')
-        .update({
-          notes: updatedNotes,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', contactId)
-        .eq('user_id', userId)
-        .select()
-        .single();
+        .eq('user_id', userId);
 
       if (error) throw error;
-      return data;
+      return true;
     } catch (error) {
-      this.handleError(error, 'addContactNote');
+      this.handleError(error, 'deleteContact');
     }
   }
 
@@ -366,6 +359,7 @@ class SupabaseService {
         author: message.author,
         content: message.content,
         edited: false,
+        deleted: false,
         user_id: userId
       };
 
@@ -382,10 +376,38 @@ class SupabaseService {
         author: data.author,
         content: data.content,
         timestamp: data.created_at,
-        edited: data.edited
+        edited: data.edited,
+        deleted: data.deleted
       };
     } catch (error) {
       this.handleError(error, 'addChatMessage');
+    }
+  }
+
+  async updateChatMessage(messageId, updates) {
+    try {
+      const userId = await this.getCurrentUserId();
+      if (!userId) throw new Error('No user ID');
+
+      const updateData = {
+        content: updates.content,
+        edited: updates.edited,
+        deleted: updates.deleted,
+        updated_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
+        .from('chat_messages_pulse_2024')
+        .update(updateData)
+        .eq('id', messageId)
+        .eq('user_id', userId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error) {
+      this.handleError(error, 'updateChatMessage');
     }
   }
 
