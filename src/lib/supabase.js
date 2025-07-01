@@ -17,7 +17,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   }
 });
 
-// Test connection on initialization
+// Test connection and log results
 supabase.from('user_profiles_pulse_2024').select('count').limit(1)
   .then(() => console.log('✅ Supabase connection established'))
   .catch(err => console.log('⚠️ Supabase connection warning:', err.message));

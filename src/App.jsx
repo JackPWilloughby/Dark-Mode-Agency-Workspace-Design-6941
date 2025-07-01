@@ -26,7 +26,7 @@ function AppContent() {
         setSidebarCollapsed(true);
       }
     };
-
+    
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -84,11 +84,9 @@ function AppContent() {
 
         <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
 
-        <main
-          className={`flex-1 transition-all duration-300 ${
-            sidebarCollapsed ? 'ml-16' : 'ml-16 lg:ml-64'
-          } ${state.isOffline ? 'mt-10' : ''}`}
-        >
+        <main className={`flex-1 transition-all duration-300 ${
+          sidebarCollapsed ? 'ml-16' : 'ml-16 lg:ml-64'
+        } ${state.isOffline ? 'mt-10' : ''}`}>
           <Routes>
             <Route path="/" element={<TaskBoard />} />
             <Route path="/tasks" element={<TaskBoard />} />
