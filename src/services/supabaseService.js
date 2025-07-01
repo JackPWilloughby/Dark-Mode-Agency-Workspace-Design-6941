@@ -3,35 +3,54 @@ import supabase from '../lib/supabase';
 class SupabaseService {
   // Helper method to handle errors gracefully
   handleError(error, operation) {
-    console.error(`Error in ${operation}:`, error);
+    console.error(`❌ Error in ${operation}:`, error);
     throw error;
+  }
+
+  // Get current user ID safely
+  async getCurrentUserId() {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      return user?.id;
+    } catch (error) {
+      console.error('Error getting current user:', error);
+      return null;
+    }
   }
 
   // Tasks
   async getTasks() {
     try {
+      const userId = await this.getCurrentUserId();
+      if (!userId) return [];
+
       const { data, error } = await supabase
         .from('tasks_pulse_2024')
         .select('*')
+        .eq('user_id', userId)
         .order('created_at', { ascending: false });
-      
+
       if (error) throw error;
       return data || [];
     } catch (error) {
-      this.handleError(error, 'getTasks');
+      console.warn('⚠️ Failed to get tasks:', error.message);
       return [];
     }
   }
 
   async addTask(task) {
     try {
+      const userId = await this.getCurrentUserId();
+      if (!userId) throw new Error('No user ID');
+
       const taskData = {
         title: task.title,
         description: task.description || '',
         status: task.status || 'todo',
         assignee: task.assignee || '',
         due_date: task.dueDate || null,
-        comments: task.comments || []
+        comments: task.comments || [],
+        user_id: userId
       };
 
       const { data, error } = await supabase
@@ -39,8 +58,9 @@ class SupabaseService {
         .insert([taskData])
         .select()
         .single();
-      
+
       if (error) throw error;
+
       return {
         id: data.id,
         title: data.title,
@@ -57,6 +77,9 @@ class SupabaseService {
 
   async updateTask(taskId, updates) {
     try {
+      const userId = await this.getCurrentUserId();
+      if (!userId) throw new Error('No user ID');
+
       const updateData = {
         title: updates.title,
         description: updates.description,
@@ -71,9 +94,10 @@ class SupabaseService {
         .from('tasks_pulse_2024')
         .update(updateData)
         .eq('id', taskId)
+        .eq('user_id', userId)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     } catch (error) {
@@ -84,28 +108,36 @@ class SupabaseService {
   // Contacts
   async getContacts() {
     try {
+      const userId = await this.getCurrentUserId();
+      if (!userId) return [];
+
       const { data, error } = await supabase
         .from('contacts_pulse_2024')
         .select('*')
+        .eq('user_id', userId)
         .order('created_at', { ascending: false });
-      
+
       if (error) throw error;
       return data || [];
     } catch (error) {
-      this.handleError(error, 'getContacts');
+      console.warn('⚠️ Failed to get contacts:', error.message);
       return [];
     }
   }
 
   async addContact(contact) {
     try {
+      const userId = await this.getCurrentUserId();
+      if (!userId) throw new Error('No user ID');
+
       const contactData = {
         name: contact.name,
         email: contact.email,
         phone: contact.phone || '',
         company: contact.company,
         status: contact.status,
-        notes: contact.notes || []
+        notes: contact.notes || [],
+        user_id: userId
       };
 
       const { data, error } = await supabase
@@ -113,8 +145,9 @@ class SupabaseService {
         .insert([contactData])
         .select()
         .single();
-      
+
       if (error) throw error;
+
       return {
         id: data.id,
         name: data.name,
@@ -131,6 +164,9 @@ class SupabaseService {
 
   async updateContact(contactId, updates) {
     try {
+      const userId = await this.getCurrentUserId();
+      if (!userId) throw new Error('No user ID');
+
       const updateData = {
         name: updates.name,
         email: updates.email,
@@ -145,9 +181,10 @@ class SupabaseService {
         .from('contacts_pulse_2024')
         .update(updateData)
         .eq('id', contactId)
+        .eq('user_id', userId)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     } catch (error) {
@@ -157,15 +194,19 @@ class SupabaseService {
 
   async addContactNote(contactId, note) {
     try {
+      const userId = await this.getCurrentUserId();
+      if (!userId) throw new Error('No user ID');
+
       // First get the current contact
       const { data: contact, error: fetchError } = await supabase
         .from('contacts_pulse_2024')
         .select('notes')
         .eq('id', contactId)
+        .eq('user_id', userId)
         .single();
-      
+
       if (fetchError) throw fetchError;
-      
+
       const currentNotes = contact.notes || [];
       const newNote = {
         id: Date.now().toString(),
@@ -173,19 +214,20 @@ class SupabaseService {
         timestamp: new Date().toISOString(),
         author: note.author
       };
-      
+
       const updatedNotes = [...currentNotes, newNote];
-      
+
       const { data, error } = await supabase
         .from('contacts_pulse_2024')
-        .update({ 
+        .update({
           notes: updatedNotes,
           updated_at: new Date().toISOString()
         })
         .eq('id', contactId)
+        .eq('user_id', userId)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     } catch (error) {
@@ -196,27 +238,35 @@ class SupabaseService {
   // Team Members
   async getTeamMembers() {
     try {
+      const userId = await this.getCurrentUserId();
+      if (!userId) return [];
+
       const { data, error } = await supabase
         .from('team_members_pulse_2024')
         .select('*')
+        .eq('user_id', userId)
         .order('created_at', { ascending: false });
-      
+
       if (error) throw error;
       return data || [];
     } catch (error) {
-      this.handleError(error, 'getTeamMembers');
+      console.warn('⚠️ Failed to get team members:', error.message);
       return [];
     }
   }
 
   async addTeamMember(member) {
     try {
+      const userId = await this.getCurrentUserId();
+      if (!userId) throw new Error('No user ID');
+
       const memberData = {
         name: member.name,
         email: member.email,
         role: member.role,
         avatar: member.avatar,
-        status: member.status || 'online'
+        status: member.status || 'online',
+        user_id: userId
       };
 
       const { data, error } = await supabase
@@ -224,8 +274,9 @@ class SupabaseService {
         .insert([memberData])
         .select()
         .single();
-      
+
       if (error) throw error;
+
       return {
         id: data.id,
         name: data.name,
@@ -241,6 +292,9 @@ class SupabaseService {
 
   async updateTeamMember(memberId, updates) {
     try {
+      const userId = await this.getCurrentUserId();
+      if (!userId) throw new Error('No user ID');
+
       const updateData = {
         name: updates.name,
         email: updates.email,
@@ -254,9 +308,10 @@ class SupabaseService {
         .from('team_members_pulse_2024')
         .update(updateData)
         .eq('id', memberId)
+        .eq('user_id', userId)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     } catch (error) {
@@ -266,11 +321,15 @@ class SupabaseService {
 
   async removeTeamMember(memberId) {
     try {
+      const userId = await this.getCurrentUserId();
+      if (!userId) throw new Error('No user ID');
+
       const { error } = await supabase
         .from('team_members_pulse_2024')
         .delete()
-        .eq('id', memberId);
-      
+        .eq('id', memberId)
+        .eq('user_id', userId);
+
       if (error) throw error;
       return true;
     } catch (error) {
@@ -281,25 +340,33 @@ class SupabaseService {
   // Chat Messages
   async getChatMessages() {
     try {
+      const userId = await this.getCurrentUserId();
+      if (!userId) return [];
+
       const { data, error } = await supabase
         .from('chat_messages_pulse_2024')
         .select('*')
+        .eq('user_id', userId)
         .order('created_at', { ascending: true });
-      
+
       if (error) throw error;
       return data || [];
     } catch (error) {
-      this.handleError(error, 'getChatMessages');
+      console.warn('⚠️ Failed to get chat messages:', error.message);
       return [];
     }
   }
 
   async addChatMessage(message) {
     try {
+      const userId = await this.getCurrentUserId();
+      if (!userId) throw new Error('No user ID');
+
       const messageData = {
         author: message.author,
         content: message.content,
-        edited: false
+        edited: false,
+        user_id: userId
       };
 
       const { data, error } = await supabase
@@ -307,8 +374,9 @@ class SupabaseService {
         .insert([messageData])
         .select()
         .single();
-      
+
       if (error) throw error;
+
       return {
         id: data.id,
         author: data.author,
@@ -324,17 +392,19 @@ class SupabaseService {
   // Test connection with better error handling
   async testConnection() {
     try {
+      console.log('🔍 Testing Supabase connection...');
+      
       // Use a simple query that should work even with empty tables
       const { error } = await supabase
-        .from('tasks_pulse_2024')
+        .from('user_profiles_pulse_2024')
         .select('id')
         .limit(1);
-      
+
       if (error) {
-        console.error('Supabase connection test failed:', error);
+        console.error('❌ Supabase connection test failed:', error);
         return false;
       }
-      
+
       console.log('✅ Supabase connection successful');
       return true;
     } catch (error) {

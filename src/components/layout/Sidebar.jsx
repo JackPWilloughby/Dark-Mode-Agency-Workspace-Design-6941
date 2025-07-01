@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
+import UserDropdown from './UserDropdown';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../../common/SafeIcon';
 
@@ -21,8 +22,9 @@ function Sidebar({ collapsed, setCollapsed }) {
     <motion.div
       animate={{ width: collapsed ? 64 : 256 }}
       transition={{ duration: 0.3, ease: 'easeOut' }}
-      className="fixed left-0 top-0 h-full bg-gray-800 border-r border-gray-700 z-20"
+      className="fixed left-0 top-0 h-full bg-gray-800 border-r border-gray-700 z-20 flex flex-col"
     >
+      {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-700">
         {!collapsed && (
           <motion.div
@@ -37,23 +39,23 @@ function Sidebar({ collapsed, setCollapsed }) {
             <span className="text-lg sm:text-xl font-bold text-white">PulseHQ</span>
           </motion.div>
         )}
-        
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="p-1 rounded-lg hover:bg-gray-700 transition-colors"
         >
-          <SafeIcon 
-            icon={collapsed ? FiChevronRight : FiChevronLeft} 
+          <SafeIcon
+            icon={collapsed ? FiChevronRight : FiChevronLeft}
             className="w-5 h-5 text-gray-400"
           />
         </button>
       </div>
 
-      <nav className="p-2 space-y-1">
+      {/* Navigation */}
+      <nav className="flex-1 p-2 space-y-1">
         {menuItems.map((item) => {
           const isActive = location.pathname === item.path || 
-                          (location.pathname === '/' && item.path === '/tasks');
-          
+            (location.pathname === '/' && item.path === '/tasks');
+
           return (
             <motion.button
               key={item.id}
@@ -82,29 +84,20 @@ function Sidebar({ collapsed, setCollapsed }) {
         })}
       </nav>
 
-      {!collapsed && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="absolute bottom-4 left-4 right-4"
-        >
-          <div className="bg-gray-700 rounded-xl p-3">
-            <div className="flex items-center space-x-3">
-              <img
-                src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=40&h=40&fit=crop&crop=face"
-                alt="User"
-                className="w-6 h-6 sm:w-8 sm:h-8 rounded-full"
-              />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs sm:text-sm font-medium text-white truncate">John Doe</p>
-                <p className="text-xs text-gray-400 truncate">Creative Director</p>
-              </div>
-              <div className="w-2 h-2 bg-green-400 rounded-full"></div>
-            </div>
-          </div>
-        </motion.div>
-      )}
+      {/* User Dropdown - Always visible */}
+      <div className="p-4 border-t border-gray-700">
+        {!collapsed ? (
+          <UserDropdown />
+        ) : (
+          <motion.div
+            className="flex justify-center"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            <UserDropdown />
+          </motion.div>
+        )}
+      </div>
     </motion.div>
   );
 }

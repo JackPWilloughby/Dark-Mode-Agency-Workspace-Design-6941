@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../hooks/useAuth.jsx';
 import AddContactModal from './AddContactModal';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../../common/SafeIcon';
@@ -10,25 +11,28 @@ const { FiX, FiMail, FiPhone, FiBuilding, FiSend, FiEdit3 } = FiIcons;
 
 function ContactPanel({ contact, onClose }) {
   const { state, dispatch } = useApp();
+  const { profile } = useAuth();
   const [newNote, setNewNote] = useState('');
   const [showEditModal, setShowEditModal] = useState(false);
-  
-  // Get updated contact from state to reflect real-time changes
+
+  const currentUser = profile?.full_name || 'You';
   const currentContact = state.contacts.find(c => c.id === contact.id) || contact;
 
   const handleAddNote = () => {
     if (newNote.trim()) {
-      dispatch({ 
-        type: 'ADD_CONTACT_NOTE', 
-        contactId: contact.id, 
-        content: newNote.trim() 
+      dispatch({
+        type: 'ADD_CONTACT_NOTE',
+        contactId: contact.id,
+        content: newNote.trim(),
+        author: currentUser
       });
       setNewNote('');
     }
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
       handleAddNote();
     }
   };
@@ -74,8 +78,7 @@ function ContactPanel({ contact, onClose }) {
             <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium text-white mt-2 ${
               currentContact.status === 'Lead' ? 'bg-yellow-500' :
               currentContact.status === 'Prospect' ? 'bg-blue-500' :
-              currentContact.status === 'Client' ? 'bg-green-500' :
-              'bg-gray-500'
+              currentContact.status === 'Client' ? 'bg-green-500' : 'bg-gray-500'
             }`}>
               {currentContact.status}
             </span>
@@ -103,12 +106,12 @@ function ContactPanel({ contact, onClose }) {
                 {currentContact.notes ? currentContact.notes.length : 0} notes
               </span>
             </div>
-            
+
             <div className="space-y-3 mb-4 max-h-60 overflow-y-auto">
               {currentContact.notes && currentContact.notes.length > 0 ? (
                 [...currentContact.notes].reverse().map((note) => (
-                  <motion.div 
-                    key={note.id} 
+                  <motion.div
+                    key={note.id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     className="bg-gray-700 rounded-xl p-3 sm:p-4"
@@ -129,7 +132,7 @@ function ContactPanel({ contact, onClose }) {
                 </div>
               )}
             </div>
-            
+
             <div className="space-y-3 border-t border-gray-700 pt-4">
               <textarea
                 value={newNote}
@@ -140,7 +143,7 @@ function ContactPanel({ contact, onClose }) {
                 placeholder="Add a note about this contact..."
               />
               <div className="flex justify-between items-center">
-                <span className="text-xs text-gray-500">Cmd/Ctrl + Enter to send</span>
+                <span className="text-xs text-gray-500">Enter to send • Shift + Enter for new line</span>
                 <button
                   onClick={handleAddNote}
                   disabled={!newNote.trim()}

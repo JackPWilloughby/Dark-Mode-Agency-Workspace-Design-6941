@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
 import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../hooks/useAuth.jsx';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../../common/SafeIcon';
 
@@ -9,9 +10,10 @@ const { FiX, FiSend, FiMessageSquare, FiCalendar, FiUser } = FiIcons;
 
 function TaskCommentsModal({ task, onClose }) {
   const { state, dispatch } = useApp();
+  const { profile } = useAuth();
   const [newComment, setNewComment] = useState('');
 
-  // Get updated task from state to reflect real-time changes
+  const currentUser = profile?.full_name || 'You';
   const currentTask = state.tasks.find(t => t.id === task.id) || task;
 
   const handleAddComment = () => {
@@ -19,14 +21,16 @@ function TaskCommentsModal({ task, onClose }) {
       dispatch({
         type: 'ADD_TASK_COMMENT',
         taskId: task.id,
-        content: newComment.trim()
+        content: newComment.trim(),
+        author: currentUser
       });
       setNewComment('');
     }
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
       handleAddComment();
     }
   };
@@ -56,7 +60,6 @@ function TaskCommentsModal({ task, onClose }) {
         className="bg-gray-800 rounded-2xl w-full max-w-md max-h-[90vh] shadow-2xl border border-gray-700 flex flex-col"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-700">
           <div className="flex items-center space-x-3">
             <SafeIcon icon={FiMessageSquare} className="w-5 h-5 text-gray-400" />
@@ -70,7 +73,6 @@ function TaskCommentsModal({ task, onClose }) {
           </button>
         </div>
 
-        {/* Task Info */}
         <div className="p-4 sm:p-6 border-b border-gray-700">
           <h3 className="font-semibold text-white mb-2 line-clamp-2">
             {currentTask.title}
@@ -99,7 +101,6 @@ function TaskCommentsModal({ task, onClose }) {
           </div>
         </div>
 
-        {/* Comments List */}
         <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-base sm:text-lg font-semibold text-white">Comments</h4>
@@ -136,7 +137,6 @@ function TaskCommentsModal({ task, onClose }) {
           </div>
         </div>
 
-        {/* Add Comment */}
         <div className="p-4 sm:p-6 border-t border-gray-700">
           <div className="space-y-3">
             <textarea
@@ -148,7 +148,7 @@ function TaskCommentsModal({ task, onClose }) {
               placeholder="Add a comment..."
             />
             <div className="flex justify-between items-center">
-              <span className="text-xs text-gray-500">Cmd/Ctrl + Enter to send</span>
+              <span className="text-xs text-gray-500">Enter to send • Shift + Enter for new line</span>
               <button
                 onClick={handleAddComment}
                 disabled={!newComment.trim()}

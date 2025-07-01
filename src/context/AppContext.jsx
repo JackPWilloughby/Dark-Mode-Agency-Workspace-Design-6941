@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import { useAuth } from '../hooks/useAuth.jsx';
 import supabaseService from '../services/supabaseService';
 
 const AppContext = createContext();
@@ -13,9 +14,7 @@ const fallbackData = {
       status: 'todo',
       assignee: 'Sarah Chen',
       dueDate: '2024-01-15',
-      comments: [
-        { id: '1', author: 'John Doe', content: 'Started working on wireframes', timestamp: new Date().toISOString() }
-      ]
+      comments: []
     },
     {
       id: '2',
@@ -45,8 +44,12 @@ const fallbackData = {
       email: 'emily@techflow.com',
       phone: '+1 (555) 123-4567',
       notes: [
-        { id: '1', content: 'Initial consultation call scheduled', timestamp: '2024-01-08T10:00:00Z', author: 'John Doe' },
-        { id: '2', content: 'Sent project proposal and timeline', timestamp: '2024-01-09T14:30:00Z', author: 'Sarah Chen' }
+        {
+          id: '1',
+          content: 'Initial consultation call scheduled',
+          timestamp: '2024-01-08T10:00:00Z',
+          author: 'John Doe'
+        }
       ]
     },
     {
@@ -56,42 +59,22 @@ const fallbackData = {
       status: 'Prospect',
       email: 'marcus@startupxyz.com',
       phone: '+1 (555) 987-6543',
-      notes: [
-        { id: '1', content: 'Interested in full rebrand package', timestamp: '2024-01-07T16:15:00Z', author: 'John Doe' }
-      ]
-    },
-    {
-      id: '3',
-      name: 'Lisa Wang',
-      company: 'GrowthCorp',
-      status: 'Lead',
-      email: 'lisa@growthcorp.com',
-      phone: '+1 (555) 456-7890',
-      notes: [
-        { id: '1', content: 'Found us through LinkedIn, needs website audit', timestamp: '2024-01-06T11:20:00Z', author: 'Sarah Chen' }
-      ]
+      notes: []
     }
   ],
   chatMessages: [
     {
       id: '1',
       author: 'John Doe',
-      content: 'Hey team, just finished the client call. They loved the initial concepts!',
+      content: 'Welcome to PulseHQ! Let\'s start collaborating.',
       timestamp: '2024-01-10T09:15:00Z',
       edited: false
     },
     {
       id: '2',
       author: 'Sarah Chen',
-      content: 'That\'s awesome! Should I start working on the detailed mockups?',
+      content: 'Great! Looking forward to working together.',
       timestamp: '2024-01-10T09:17:00Z',
-      edited: false
-    },
-    {
-      id: '3',
-      author: 'John Doe',
-      content: 'Yes, let\'s move forward with the homepage design first',
-      timestamp: '2024-01-10T09:18:00Z',
       edited: false
     }
   ],
@@ -120,7 +103,6 @@ const initialState = {
   contacts: [],
   chatMessages: [],
   teamMembers: [],
-  currentUser: 'John Doe',
   typingUsers: [],
   isLoading: true,
   error: null,
@@ -131,25 +113,18 @@ function appReducer(state, action) {
   switch (action.type) {
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
-    
     case 'SET_ERROR':
       return { ...state, error: action.payload, isLoading: false };
-    
     case 'SET_OFFLINE':
       return { ...state, isOffline: action.payload, isLoading: false };
-    
     case 'SET_TASKS':
       return { ...state, tasks: action.payload };
-    
     case 'SET_CONTACTS':
       return { ...state, contacts: action.payload };
-    
     case 'SET_TEAM_MEMBERS':
       return { ...state, teamMembers: action.payload };
-    
     case 'SET_CHAT_MESSAGES':
       return { ...state, chatMessages: action.payload };
-
     case 'MOVE_TASK':
       return {
         ...state,
@@ -159,13 +134,14 @@ function appReducer(state, action) {
             : task
         )
       };
-    
     case 'ADD_TASK':
       return {
         ...state,
-        tasks: [action.task, ...state.tasks]
+        tasks: [
+          { ...action.task, id: action.task.id || Date.now().toString() },
+          ...state.tasks
+        ]
       };
-    
     case 'UPDATE_TASK':
       return {
         ...state,
@@ -175,7 +151,6 @@ function appReducer(state, action) {
             : task
         )
       };
-    
     case 'ADD_TASK_COMMENT':
       return {
         ...state,
@@ -183,23 +158,27 @@ function appReducer(state, action) {
           task.id === action.taskId
             ? {
                 ...task,
-                comments: [...(task.comments || []), {
-                  id: Date.now().toString(),
-                  author: state.currentUser,
-                  content: action.content,
-                  timestamp: new Date().toISOString()
-                }]
+                comments: [
+                  ...(task.comments || []),
+                  {
+                    id: Date.now().toString(),
+                    author: action.author,
+                    content: action.content,
+                    timestamp: new Date().toISOString()
+                  }
+                ]
               }
             : task
         )
       };
-    
     case 'ADD_CONTACT':
       return {
         ...state,
-        contacts: [action.contact, ...state.contacts]
+        contacts: [
+          { ...action.contact, id: action.contact.id || Date.now().toString() },
+          ...state.contacts
+        ]
       };
-    
     case 'UPDATE_CONTACT':
       return {
         ...state,
@@ -209,7 +188,6 @@ function appReducer(state, action) {
             : contact
         )
       };
-    
     case 'ADD_CONTACT_NOTE':
       return {
         ...state,
@@ -217,29 +195,33 @@ function appReducer(state, action) {
           contact.id === action.contactId
             ? {
                 ...contact,
-                notes: [...(contact.notes || []), {
-                  id: Date.now().toString(),
-                  content: action.content,
-                  timestamp: new Date().toISOString(),
-                  author: state.currentUser
-                }]
+                notes: [
+                  ...(contact.notes || []),
+                  {
+                    id: Date.now().toString(),
+                    content: action.content,
+                    timestamp: new Date().toISOString(),
+                    author: action.author
+                  }
+                ]
               }
             : contact
         )
       };
-    
     case 'ADD_CHAT_MESSAGE':
       return {
         ...state,
-        chatMessages: [...state.chatMessages, {
-          id: Date.now().toString(),
-          author: state.currentUser,
-          content: action.content,
-          timestamp: new Date().toISOString(),
-          edited: false
-        }]
+        chatMessages: [
+          ...state.chatMessages,
+          {
+            id: Date.now().toString(),
+            author: action.author,
+            content: action.content,
+            timestamp: new Date().toISOString(),
+            edited: false
+          }
+        ]
       };
-    
     case 'EDIT_CHAT_MESSAGE':
       return {
         ...state,
@@ -249,19 +231,16 @@ function appReducer(state, action) {
             : msg
         )
       };
-    
     case 'SET_TYPING_USERS':
-      return {
-        ...state,
-        typingUsers: action.users
-      };
-    
+      return { ...state, typingUsers: action.users };
     case 'ADD_TEAM_MEMBER':
       return {
         ...state,
-        teamMembers: [action.member, ...state.teamMembers]
+        teamMembers: [
+          { ...action.member, id: action.member.id || Date.now().toString() },
+          ...state.teamMembers
+        ]
       };
-    
     case 'UPDATE_TEAM_MEMBER':
       return {
         ...state,
@@ -271,23 +250,21 @@ function appReducer(state, action) {
             : member
         )
       };
-    
     case 'REMOVE_TEAM_MEMBER':
       return {
         ...state,
         teamMembers: state.teamMembers.filter(member => member.id !== action.memberId)
       };
-    
     default:
       return state;
   }
 }
 
 // Enhanced dispatch with Supabase integration and fallback
-async function enhancedDispatch(dispatch, action, state) {
+async function enhancedDispatch(dispatch, action, state, user) {
   try {
-    // If offline, just update local state
-    if (state.isOffline) {
+    // If offline or no user, just update local state
+    if (state.isOffline || !user) {
       dispatch(action);
       return;
     }
@@ -295,15 +272,15 @@ async function enhancedDispatch(dispatch, action, state) {
     switch (action.type) {
       case 'ADD_TASK':
         try {
-          const newTask = await supabaseService.addTask(action.task);
+          const newTask = await supabaseService.addTask({ ...action.task, user_id: user.id });
           dispatch({ type: 'ADD_TASK', task: newTask });
         } catch (error) {
-          // Fallback to local state
+          console.warn('Failed to add task to Supabase, adding locally');
           const localTask = { ...action.task, id: Date.now().toString() };
           dispatch({ type: 'ADD_TASK', task: localTask });
         }
         break;
-      
+
       case 'UPDATE_TASK':
         try {
           await supabaseService.updateTask(action.taskId, action.updates);
@@ -312,17 +289,18 @@ async function enhancedDispatch(dispatch, action, state) {
         }
         dispatch(action);
         break;
-      
+
       case 'ADD_CONTACT':
         try {
-          const newContact = await supabaseService.addContact(action.contact);
+          const newContact = await supabaseService.addContact({ ...action.contact, user_id: user.id });
           dispatch({ type: 'ADD_CONTACT', contact: newContact });
         } catch (error) {
+          console.warn('Failed to add contact to Supabase, adding locally');
           const localContact = { ...action.contact, id: Date.now().toString() };
           dispatch({ type: 'ADD_CONTACT', contact: localContact });
         }
         break;
-      
+
       case 'UPDATE_CONTACT':
         try {
           await supabaseService.updateContact(action.contactId, action.updates);
@@ -331,29 +309,30 @@ async function enhancedDispatch(dispatch, action, state) {
         }
         dispatch(action);
         break;
-      
+
       case 'ADD_CONTACT_NOTE':
         try {
           await supabaseService.addContactNote(action.contactId, {
             content: action.content,
-            author: state.currentUser
+            author: action.author
           });
         } catch (error) {
           console.warn('Failed to add note in Supabase, adding locally');
         }
         dispatch(action);
         break;
-      
+
       case 'ADD_TEAM_MEMBER':
         try {
-          const newMember = await supabaseService.addTeamMember(action.member);
+          const newMember = await supabaseService.addTeamMember({ ...action.member, user_id: user.id });
           dispatch({ type: 'ADD_TEAM_MEMBER', member: newMember });
         } catch (error) {
+          console.warn('Failed to add team member to Supabase, adding locally');
           const localMember = { ...action.member, id: Date.now().toString() };
           dispatch({ type: 'ADD_TEAM_MEMBER', member: localMember });
         }
         break;
-      
+
       case 'UPDATE_TEAM_MEMBER':
         try {
           await supabaseService.updateTeamMember(action.memberId, action.updates);
@@ -362,7 +341,7 @@ async function enhancedDispatch(dispatch, action, state) {
         }
         dispatch(action);
         break;
-      
+
       case 'REMOVE_TEAM_MEMBER':
         try {
           await supabaseService.removeTeamMember(action.memberId);
@@ -371,55 +350,86 @@ async function enhancedDispatch(dispatch, action, state) {
         }
         dispatch(action);
         break;
-      
+
       case 'ADD_CHAT_MESSAGE':
         try {
           await supabaseService.addChatMessage({
-            author: state.currentUser,
-            content: action.content
+            author: action.author,
+            content: action.content,
+            user_id: user.id
           });
         } catch (error) {
           console.warn('Failed to add chat message in Supabase, adding locally');
         }
-        dispatch({ type: 'ADD_CHAT_MESSAGE', content: action.content });
+        dispatch(action);
         break;
-      
+
       default:
         dispatch(action);
     }
   } catch (error) {
     console.error('Enhanced dispatch error:', error);
-    // Don't show error for every action, just continue with local state
     dispatch(action);
   }
 }
 
 export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
+  const { user, loading: authLoading } = useAuth();
 
   // Enhanced dispatch function
   const enhancedDispatchFunc = (action) => {
-    enhancedDispatch(dispatch, action, state);
+    enhancedDispatch(dispatch, action, state, user);
   };
 
   // Load initial data from Supabase with fallback
   useEffect(() => {
+    let mounted = true;
+
     async function loadInitialData() {
+      if (authLoading) {
+        console.log('⏳ Auth still loading...');
+        return;
+      }
+
+      if (!mounted) return;
+
       try {
+        console.log('📊 Loading workspace data...');
         dispatch({ type: 'SET_LOADING', payload: true });
-        
-        // Test connection with timeout
-        const connectionPromise = supabaseService.testConnection();
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Connection timeout')), 5000)
-        );
-        
-        const connected = await Promise.race([connectionPromise, timeoutPromise]);
-        
-        if (!connected) {
-          throw new Error('Connection test failed');
+
+        if (!user) {
+          console.log('👤 No user found, using fallback data');
+          // No user, use fallback data
+          dispatch({ type: 'SET_TASKS', payload: fallbackData.tasks });
+          dispatch({ type: 'SET_CONTACTS', payload: fallbackData.contacts });
+          dispatch({ type: 'SET_TEAM_MEMBERS', payload: fallbackData.teamMembers });
+          dispatch({ type: 'SET_CHAT_MESSAGES', payload: fallbackData.chatMessages });
+          dispatch({ type: 'SET_LOADING', payload: false });
+          return;
         }
 
+        console.log('🔌 Testing Supabase connection...');
+        
+        // Test connection with a shorter timeout
+        const connectionTest = supabaseService.testConnection();
+        const connectionTimeout = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Connection timeout')), 3000)
+        );
+
+        let connected = false;
+        try {
+          connected = await Promise.race([connectionTest, connectionTimeout]);
+        } catch (error) {
+          console.warn('⚠️ Connection test failed:', error.message);
+        }
+
+        if (!connected) {
+          throw new Error('Supabase connection failed');
+        }
+
+        console.log('📥 Loading data from Supabase...');
+        
         // Load all data in parallel with timeout
         const dataPromise = Promise.all([
           supabaseService.getTasks(),
@@ -427,15 +437,17 @@ export function AppProvider({ children }) {
           supabaseService.getTeamMembers(),
           supabaseService.getChatMessages()
         ]);
-        
-        const dataTimeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Data loading timeout')), 10000)
+
+        const dataTimeout = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Data loading timeout')), 8000)
         );
 
         const [tasks, contacts, teamMembers, chatMessages] = await Promise.race([
-          dataPromise, 
-          dataTimeoutPromise
+          dataPromise,
+          dataTimeout
         ]);
+
+        if (!mounted) return;
 
         // Transform data to match frontend format
         const transformedTasks = tasks.map(task => ({
@@ -479,12 +491,13 @@ export function AppProvider({ children }) {
         dispatch({ type: 'SET_CONTACTS', payload: transformedContacts });
         dispatch({ type: 'SET_TEAM_MEMBERS', payload: transformedTeamMembers });
         dispatch({ type: 'SET_CHAT_MESSAGES', payload: transformedChatMessages });
-        
         dispatch({ type: 'SET_LOADING', payload: false });
-        console.log('✅ Data loaded successfully from Supabase');
         
+        console.log('✅ Workspace data loaded successfully from Supabase');
       } catch (error) {
-        console.warn('⚠️ Supabase connection failed, using fallback data:', error.message);
+        console.warn('⚠️ Failed to load from Supabase, using fallback data:', error.message);
+        
+        if (!mounted) return;
         
         // Use fallback data
         dispatch({ type: 'SET_TASKS', payload: fallbackData.tasks });
@@ -499,7 +512,11 @@ export function AppProvider({ children }) {
     }
 
     loadInitialData();
-  }, []);
+
+    return () => {
+      mounted = false;
+    };
+  }, [user, authLoading]);
 
   return (
     <AppContext.Provider value={{ state, dispatch: enhancedDispatchFunc }}>
