@@ -26,7 +26,7 @@ function LoginPage() {
         setError('Please enter your full name');
         return;
       }
-      
+
       const { data, error } = await signUp(email, password, fullName);
       if (error) {
         setError(error.message);
@@ -55,15 +55,6 @@ function LoginPage() {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e);
-    }
-  };
-
-  // Pre-fill for testing
-  const handleQuickFill = () => {
-    setEmail('jack@pulsefitmarketing.com');
-    setPassword('password123');
-    if (isSignUp) {
-      setFullName('Jack Pulse');
     }
   };
 
@@ -108,17 +99,6 @@ function LoginPage() {
             <p className="text-red-400 text-sm text-center">{error}</p>
           </motion.div>
         )}
-
-        {/* Quick Fill for Testing */}
-        <div className="mb-6">
-          <button
-            type="button"
-            onClick={handleQuickFill}
-            className="w-full text-xs text-blue-400 hover:text-blue-300 transition-colors"
-          >
-            Quick Fill for Testing
-          </button>
-        </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -189,10 +169,7 @@ function LoginPage() {
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-300 transition-colors"
               >
-                <SafeIcon
-                  icon={showPassword ? FiEyeOff : FiEye}
-                  className="w-5 h-5"
-                />
+                <SafeIcon icon={showPassword ? FiEyeOff : FiEye} className="w-5 h-5" />
               </button>
             </div>
           </div>
@@ -208,10 +185,7 @@ function LoginPage() {
               <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
             ) : (
               <>
-                <SafeIcon
-                  icon={isSignUp ? FiUserPlus : FiLogIn}
-                  className="w-5 h-5"
-                />
+                <SafeIcon icon={isSignUp ? FiUserPlus : FiLogIn} className="w-5 h-5" />
                 <span>{isSignUp ? 'Create Account' : 'Sign In'}</span>
               </>
             )}

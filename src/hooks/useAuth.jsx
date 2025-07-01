@@ -128,6 +128,41 @@ export function AuthProvider({ children }) {
     }
   }
 
+  async function updateProfile(updates) {
+    try {
+      if (!user?.id) {
+        throw new Error('No user logged in');
+      }
+
+      console.log('👤 Updating profile...');
+
+      const { data, error } = await supabase
+        .from('user_profiles_pulse_2024')
+        .update({
+          full_name: updates.full_name,
+          avatar_url: updates.avatar_url,
+          role: updates.role,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('❌ Error updating profile:', error);
+        throw error;
+      }
+
+      console.log('✅ Profile updated successfully');
+      setProfile(data);
+      
+      return { data, error: null };
+    } catch (error) {
+      console.error('❌ Error in updateProfile:', error);
+      return { data: null, error };
+    }
+  }
+
   async function signUp(email, password, fullName) {
     try {
       setLoading(true);
@@ -201,7 +236,8 @@ export function AuthProvider({ children }) {
     loading,
     signUp,
     signIn,
-    signOut
+    signOut,
+    updateProfile
   };
 
   return (
