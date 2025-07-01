@@ -6,9 +6,9 @@ import { format, isAfter, isBefore, startOfDay } from 'date-fns';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../../common/SafeIcon';
 
-const { FiCalendar, FiUser, FiMessageSquare, FiClock } = FiIcons;
+const { FiCalendar, FiUser, FiMessageSquare, FiClock, FiEdit3 } = FiIcons;
 
-function TaskCard({ task, onClick, isDragging = false }) {
+function TaskCard({ task, onClick, onEdit, isDragging = false }) {
   const {
     attributes,
     listeners,
@@ -43,13 +43,18 @@ function TaskCard({ task, onClick, isDragging = false }) {
     }
   };
 
-  // Handle click separately from drag
-  const handleClick = (e) => {
-    // Only trigger click if not dragging
+  // Handle click for comments
+  const handleCommentsClick = (e) => {
     if (!isDragging && !isSortableDragging) {
       e.stopPropagation();
       onClick(task);
     }
+  };
+
+  // Handle edit click
+  const handleEditClick = (e) => {
+    e.stopPropagation();
+    onEdit(task);
   };
 
   return (
@@ -58,29 +63,32 @@ function TaskCard({ task, onClick, isDragging = false }) {
       style={style}
       {...attributes}
       {...listeners}
-      className={`bg-gray-750 hover:bg-gray-700 border-l-4 ${getStatusColor()} rounded-2xl p-4 cursor-pointer transition-all duration-200 group ${
-        isDragging || isSortableDragging 
-          ? 'opacity-50 shadow-2xl scale-105' 
-          : 'hover:shadow-lg backdrop-blur-sm'
+      className={`bg-gray-750 hover:bg-gray-700 border-l-4 ${getStatusColor()} rounded-2xl p-4 cursor-pointer transition-all duration-200 group relative ${
+        isDragging || isSortableDragging ? 'opacity-50 shadow-2xl scale-105' : 'hover:shadow-lg backdrop-blur-sm'
       }`}
       whileHover={{ y: -2 }}
       layout
     >
-      {/* Clickable overlay for task details */}
-      <div 
-        onClick={handleClick}
-        className="space-y-3 cursor-pointer"
+      {/* Edit button */}
+      <button
+        onClick={handleEditClick}
+        className="absolute top-3 right-3 p-1.5 opacity-0 group-hover:opacity-100 hover:bg-gray-600 rounded-lg transition-all z-10"
       >
+        <SafeIcon icon={FiEdit3} className="w-3.5 h-3.5 text-gray-400 hover:text-blue-400" />
+      </button>
+
+      {/* Clickable area for comments */}
+      <div onClick={handleCommentsClick} className="space-y-3 cursor-pointer pr-8">
         <h4 className="font-medium text-white group-hover:text-blue-400 transition-colors line-clamp-2">
           {task.title}
         </h4>
-        
+
         {task.description && (
           <p className="text-sm text-gray-400 line-clamp-2">
             {task.description}
           </p>
         )}
-        
+
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">
             {task.assignee && (
@@ -89,15 +97,14 @@ function TaskCard({ task, onClick, isDragging = false }) {
                 <span>{task.assignee}</span>
               </div>
             )}
-            
             {task.comments && task.comments.length > 0 && (
-              <div className="flex items-center space-x-1 text-xs text-gray-400">
+              <div className="flex items-center space-x-1 text-xs text-gray-400 hover:text-blue-400 transition-colors">
                 <SafeIcon icon={FiMessageSquare} className="w-3 h-3" />
                 <span>{task.comments.length}</span>
               </div>
             )}
           </div>
-          
+
           {task.dueDate && (
             <div className={`flex items-center space-x-1 text-xs px-2 py-1 rounded-lg ${getDueDateColor()}`}>
               <SafeIcon icon={isOverdue ? FiClock : FiCalendar} className="w-3 h-3" />
