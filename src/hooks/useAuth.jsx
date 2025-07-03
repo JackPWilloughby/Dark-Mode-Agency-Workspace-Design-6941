@@ -262,18 +262,18 @@ export function AuthProvider({ children }) {
 
   async function signOut() {
     try {
-      setLoading(true);
       console.log('👋 Signing out user...');
       
+      // Don't set loading to true immediately to prevent content flash
       await supabase.auth.signOut();
+      
+      // Clear user state
       setUser(null);
       setProfile(null);
       
       console.log('✅ Sign out successful');
     } catch (error) {
       console.error('Sign out error:', error);
-    } finally {
-      setLoading(false);
     }
   }
 

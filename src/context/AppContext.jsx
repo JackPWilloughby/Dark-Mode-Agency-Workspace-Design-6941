@@ -48,13 +48,17 @@ const initialState = {
   typingUsers: [],
   isLoading: false,
   error: null,
-  dataLoaded: false
+  dataLoaded: false,
+  isSigningOut: false
 };
 
 function appReducer(state, action) {
   switch (action.type) {
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
+    
+    case 'SET_SIGNING_OUT':
+      return { ...state, isSigningOut: action.payload };
     
     case 'SET_ERROR':
       return { ...state, error: action.payload, isLoading: false };
@@ -69,14 +73,16 @@ function appReducer(state, action) {
         chatMessages: action.payload.chatMessages || [],
         isLoading: false,
         error: null,
-        dataLoaded: true
+        dataLoaded: true,
+        isSigningOut: false
       };
     
     case 'RESET_DATA':
       console.log('🔄 Resetting app data...');
       return {
         ...initialState,
-        dataLoaded: false
+        dataLoaded: false,
+        isSigningOut: false
       };
     
     case 'MOVE_TASK':
@@ -340,8 +346,13 @@ export function AppProvider({ children }) {
     }
 
     if (!user) {
-      console.log('❌ No user, resetting data...');
-      dispatch({ type: 'RESET_DATA' });
+      console.log('❌ No user, resetting data after delay...');
+      // Add a small delay before resetting data to prevent flash
+      setTimeout(() => {
+        if (!document.querySelector('[data-auth-loading]')) {
+          dispatch({ type: 'RESET_DATA' });
+        }
+      }, 100);
       return;
     }
 

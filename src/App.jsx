@@ -54,11 +54,17 @@ function AppContent() {
     hasUser: !!user,
     dataLoaded: state.dataLoaded,
     appLoading: state.isLoading,
-    isLoading
+    isLoading,
+    isSigningOut: state.isSigningOut
   });
 
+  // Show loading screen with auth loading indicator
   if (isLoading) {
-    return <LoadingScreen />;
+    return (
+      <div data-auth-loading="true">
+        <LoadingScreen />
+      </div>
+    );
   }
 
   // Show login if not authenticated
