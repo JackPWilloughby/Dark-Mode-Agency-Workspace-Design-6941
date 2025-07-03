@@ -46,7 +46,7 @@ const initialState = {
   chatMessages: [],
   teamMembers: [],
   typingUsers: [],
-  isLoading: true,
+  isLoading: false,
   error: null,
   dataLoaded: false
 };
@@ -60,6 +60,7 @@ function appReducer(state, action) {
       return { ...state, error: action.payload, isLoading: false };
     
     case 'INITIALIZE_DATA':
+      console.log('🎯 Initializing app data...');
       return {
         ...state,
         tasks: action.payload.tasks || [],
@@ -72,9 +73,9 @@ function appReducer(state, action) {
       };
     
     case 'RESET_DATA':
+      console.log('🔄 Resetting app data...');
       return {
         ...initialState,
-        isLoading: false,
         dataLoaded: false
       };
     
@@ -104,7 +105,6 @@ function appReducer(state, action) {
       supabaseService.addTask(newTask)
         .then(serverTask => {
           if (serverTask && serverTask.id !== newTask.id) {
-            // Update with server ID if needed
             console.log('Task synced with server:', serverTask.id);
           }
         })
@@ -334,29 +334,69 @@ export function AppProvider({ children }) {
 
   // Load user data when authenticated
   useEffect(() => {
+    if (authLoading) {
+      console.log('⏳ Auth still loading...');
+      return;
+    }
+
     if (!user) {
-      // Clear data when user logs out
+      console.log('❌ No user, resetting data...');
       dispatch({ type: 'RESET_DATA' });
       return;
     }
 
-    loadUserData();
-  }, [user]);
+    console.log('✅ User authenticated, loading data for:', user.email);
+    loadUserDataWithTimeout();
+  }, [user, authLoading]);
 
-  const loadUserData = async () => {
+  const loadUserDataWithTimeout = async () => {
     if (!user) return;
 
     console.log('📊 Loading user data from Supabase...');
     dispatch({ type: 'SET_LOADING', payload: true });
 
+    // Set a timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      console.log('⏰ Loading timeout reached, using fallback data');
+      const fallbackData = getInitialData(user);
+      dispatch({ type: 'INITIALIZE_DATA', payload: fallbackData });
+    }, 5000); // 5 second timeout
+
     try {
-      // Load all user data in parallel
-      const [tasks, contacts, teamMembers, chatMessages] = await Promise.all([
-        supabaseService.getTasks(),
-        supabaseService.getContacts(),
-        supabaseService.getTeamMembers(),
-        supabaseService.getChatMessages()
-      ]);
+      // Load all user data in parallel with shorter timeout
+      const dataPromises = [
+        Promise.race([
+          supabaseService.getTasks(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Tasks timeout')), 3000))
+        ]).catch(() => []),
+        
+        Promise.race([
+          supabaseService.getContacts(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Contacts timeout')), 3000))
+        ]).catch(() => []),
+        
+        Promise.race([
+          supabaseService.getTeamMembers(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Team timeout')), 3000))
+        ]).catch(() => []),
+        
+        Promise.race([
+          supabaseService.getChatMessages(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Chat timeout')), 3000))
+        ]).catch(() => [])
+      ];
+
+      const [tasks, contacts, teamMembers, chatMessages] = await Promise.all(dataPromises);
+
+      // Clear timeout since we got data
+      clearTimeout(timeoutId);
+
+      console.log('📈 Data loaded:', {
+        tasks: tasks.length,
+        contacts: contacts.length,
+        teamMembers: teamMembers.length,
+        chatMessages: chatMessages.length
+      });
 
       // If no data exists, use initial data
       let userData = {
@@ -387,9 +427,10 @@ export function AppProvider({ children }) {
       }));
 
       dispatch({ type: 'INITIALIZE_DATA', payload: userData });
-      console.log('✅ User data loaded successfully');
+      console.log('✅ User data initialized successfully');
 
     } catch (error) {
+      clearTimeout(timeoutId);
       console.warn('⚠️ Failed to load user data, using fallback:', error.message);
       
       // Use fallback data if server fails
@@ -401,7 +442,7 @@ export function AppProvider({ children }) {
   const value = {
     state,
     dispatch,
-    refreshData: loadUserData
+    refreshData: loadUserDataWithTimeout
   };
 
   return (

@@ -10,10 +10,11 @@ import TeamPage from './components/team/TeamPage';
 import SearchModal from './components/common/SearchModal';
 import LoadingScreen from './components/common/LoadingScreen';
 import LoginPage from './components/auth/LoginPage';
-import { AppProvider } from './context/AppContext';
+import { AppProvider, useApp } from './context/AppContext';
 
 function AppContent() {
   const { user, loading: authLoading } = useAuth();
+  const { state } = useApp();
   const [sidebarCollapsed, setSidebarCollapsed] = useState(window.innerWidth < 1024);
   const [showSearch, setShowSearch] = useState(false);
 
@@ -40,13 +41,23 @@ function AppContent() {
         setSidebarCollapsed(true);
       }
     };
-    
+
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Show loading only briefly
-  if (authLoading) {
+  // Show loading screen only when auth is loading OR when we have a user but data isn't loaded yet
+  const isLoading = authLoading || (user && !state.dataLoaded && state.isLoading);
+
+  console.log('🔄 App state:', {
+    authLoading,
+    hasUser: !!user,
+    dataLoaded: state.dataLoaded,
+    appLoading: state.isLoading,
+    isLoading
+  });
+
+  if (isLoading) {
     return <LoadingScreen />;
   }
 
@@ -59,8 +70,11 @@ function AppContent() {
   return (
     <Router>
       <div className="flex h-screen bg-gray-900 text-gray-100 overflow-hidden">
-        <Sidebar collapsed={sidebarCollapsed} setCollapsed={setSidebarCollapsed} />
-
+        <Sidebar 
+          collapsed={sidebarCollapsed} 
+          setCollapsed={setSidebarCollapsed} 
+        />
+        
         <main className={`flex-1 transition-all duration-300 ${
           sidebarCollapsed ? 'ml-16' : 'ml-16 lg:ml-64'
         }`}>
@@ -74,14 +88,16 @@ function AppContent() {
         </main>
 
         <AnimatePresence>
-          {showSearch && <SearchModal onClose={() => setShowSearch(false)} />}
+          {showSearch && (
+            <SearchModal onClose={() => setShowSearch(false)} />
+          )}
         </AnimatePresence>
       </div>
     </Router>
   );
 }
 
-function App() {
+function AppWithProviders() {
   return (
     <AuthProvider>
       <AppProvider>
@@ -89,6 +105,10 @@ function App() {
       </AppProvider>
     </AuthProvider>
   );
+}
+
+function App() {
+  return <AppWithProviders />;
 }
 
 export default App;

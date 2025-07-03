@@ -30,7 +30,11 @@ class SupabaseService {
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.warn('Tasks table might not exist:', error.message);
+        return [];
+      }
+
       return data || [];
     } catch (error) {
       console.warn('⚠️ Failed to get tasks:', error.message);
@@ -59,7 +63,10 @@ class SupabaseService {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.warn('Failed to add task to database:', error.message);
+        return task; // Return original task if DB fails
+      }
 
       return {
         id: data.id,
@@ -71,7 +78,8 @@ class SupabaseService {
         comments: data.comments || []
       };
     } catch (error) {
-      this.handleError(error, 'addTask');
+      console.warn('Error adding task:', error.message);
+      return task; // Return original task as fallback
     }
   }
 
@@ -98,10 +106,15 @@ class SupabaseService {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.warn('Failed to update task in database:', error.message);
+        return updates;
+      }
+
       return data;
     } catch (error) {
-      this.handleError(error, 'updateTask');
+      console.warn('Error updating task:', error.message);
+      return updates;
     }
   }
 
@@ -116,10 +129,14 @@ class SupabaseService {
         .eq('id', taskId)
         .eq('user_id', userId);
 
-      if (error) throw error;
+      if (error) {
+        console.warn('Failed to delete task from database:', error.message);
+      }
+
       return true;
     } catch (error) {
-      this.handleError(error, 'deleteTask');
+      console.warn('Error deleting task:', error.message);
+      return true; // Return true to allow local deletion
     }
   }
 
@@ -135,7 +152,11 @@ class SupabaseService {
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.warn('Contacts table might not exist:', error.message);
+        return [];
+      }
+
       return data || [];
     } catch (error) {
       console.warn('⚠️ Failed to get contacts:', error.message);
@@ -164,7 +185,10 @@ class SupabaseService {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.warn('Failed to add contact to database:', error.message);
+        return contact;
+      }
 
       return {
         id: data.id,
@@ -176,7 +200,8 @@ class SupabaseService {
         notes: data.notes || []
       };
     } catch (error) {
-      this.handleError(error, 'addContact');
+      console.warn('Error adding contact:', error.message);
+      return contact;
     }
   }
 
@@ -203,10 +228,15 @@ class SupabaseService {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.warn('Failed to update contact in database:', error.message);
+        return updates;
+      }
+
       return data;
     } catch (error) {
-      this.handleError(error, 'updateContact');
+      console.warn('Error updating contact:', error.message);
+      return updates;
     }
   }
 
@@ -221,10 +251,14 @@ class SupabaseService {
         .eq('id', contactId)
         .eq('user_id', userId);
 
-      if (error) throw error;
+      if (error) {
+        console.warn('Failed to delete contact from database:', error.message);
+      }
+
       return true;
     } catch (error) {
-      this.handleError(error, 'deleteContact');
+      console.warn('Error deleting contact:', error.message);
+      return true;
     }
   }
 
@@ -240,7 +274,11 @@ class SupabaseService {
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.warn('Team members table might not exist:', error.message);
+        return [];
+      }
+
       return data || [];
     } catch (error) {
       console.warn('⚠️ Failed to get team members:', error.message);
@@ -268,7 +306,10 @@ class SupabaseService {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.warn('Failed to add team member to database:', error.message);
+        return member;
+      }
 
       return {
         id: data.id,
@@ -279,7 +320,8 @@ class SupabaseService {
         status: data.status
       };
     } catch (error) {
-      this.handleError(error, 'addTeamMember');
+      console.warn('Error adding team member:', error.message);
+      return member;
     }
   }
 
@@ -305,10 +347,15 @@ class SupabaseService {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.warn('Failed to update team member in database:', error.message);
+        return updates;
+      }
+
       return data;
     } catch (error) {
-      this.handleError(error, 'updateTeamMember');
+      console.warn('Error updating team member:', error.message);
+      return updates;
     }
   }
 
@@ -323,10 +370,14 @@ class SupabaseService {
         .eq('id', memberId)
         .eq('user_id', userId);
 
-      if (error) throw error;
+      if (error) {
+        console.warn('Failed to remove team member from database:', error.message);
+      }
+
       return true;
     } catch (error) {
-      this.handleError(error, 'removeTeamMember');
+      console.warn('Error removing team member:', error.message);
+      return true;
     }
   }
 
@@ -342,7 +393,11 @@ class SupabaseService {
         .eq('user_id', userId)
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.warn('Chat messages table might not exist:', error.message);
+        return [];
+      }
+
       return data || [];
     } catch (error) {
       console.warn('⚠️ Failed to get chat messages:', error.message);
@@ -369,7 +424,10 @@ class SupabaseService {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.warn('Failed to add chat message to database:', error.message);
+        return message;
+      }
 
       return {
         id: data.id,
@@ -380,7 +438,8 @@ class SupabaseService {
         deleted: data.deleted
       };
     } catch (error) {
-      this.handleError(error, 'addChatMessage');
+      console.warn('Error adding chat message:', error.message);
+      return message;
     }
   }
 
@@ -404,10 +463,15 @@ class SupabaseService {
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.warn('Failed to update chat message in database:', error.message);
+        return updates;
+      }
+
       return data;
     } catch (error) {
-      this.handleError(error, 'updateChatMessage');
+      console.warn('Error updating chat message:', error.message);
+      return updates;
     }
   }
 
