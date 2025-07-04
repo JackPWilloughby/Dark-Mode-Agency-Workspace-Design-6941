@@ -10,8 +10,18 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src')
     }
   },
-   build: {
+  build: {
     outDir: 'dist',
-    sourcemap: true
+    sourcemap: false, // Disable sourcemaps for production build
+    rollupOptions: {
+      output: {
+        chunkFileNames: 'assets/[name]-[hash].js',
+        entryFileNames: 'assets/[name]-[hash].js',
+        assetFileNames: 'assets/[name]-[hash].[ext]'
+      }
+    }
   },
+  optimizeDeps: {
+    exclude: ['lucide-react']
+  }
 });

@@ -49,7 +49,9 @@ const initialState = {
   isLoading: false,
   error: null,
   dataLoaded: false,
-  isSigningOut: false
+  isSigningOut: false,
+  lastSync: null,
+  syncErrors: []
 };
 
 function appReducer(state, action) {
@@ -61,7 +63,19 @@ function appReducer(state, action) {
       return { ...state, isSigningOut: action.payload };
     
     case 'SET_ERROR':
-      return { ...state, error: action.payload, isLoading: false };
+      console.error('❌ App error:', action.payload);
+      return { 
+        ...state, 
+        error: action.payload, 
+        isLoading: false,
+        syncErrors: [...state.syncErrors, {
+          error: action.payload,
+          timestamp: new Date().toISOString()
+        }].slice(-10) // Keep last 10 errors
+      };
+    
+    case 'CLEAR_ERROR':
+      return { ...state, error: null };
     
     case 'INITIALIZE_DATA':
       console.log('🎯 Initializing app data...');
@@ -74,7 +88,8 @@ function appReducer(state, action) {
         isLoading: false,
         error: null,
         dataLoaded: true,
-        isSigningOut: false
+        isSigningOut: false,
+        lastSync: new Date().toISOString()
       };
     
     case 'RESET_DATA':
@@ -85,258 +100,462 @@ function appReducer(state, action) {
         isSigningOut: false
       };
     
-    case 'MOVE_TASK':
-      const updatedTasks = state.tasks.map(task =>
-        task.id === action.taskId ? { ...task, status: action.newStatus } : task
-      );
-      // Sync with Supabase
-      if (action.taskId !== 'welcome-task') {
-        const task = updatedTasks.find(t => t.id === action.taskId);
-        supabaseService.updateTask(action.taskId, task).catch(console.error);
-      }
-      return { ...state, tasks: updatedTasks };
-    
-    case 'ADD_TASK':
-      const newTask = { 
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        title: action.task.title,
-        description: action.task.description || '',
-        status: action.task.status || 'todo',
-        assignee: action.task.assignee || '',
-        dueDate: action.task.dueDate || '',
-        comments: action.task.comments || []
-      };
-      
-      // Sync with Supabase
-      supabaseService.addTask(newTask)
-        .then(serverTask => {
-          if (serverTask && serverTask.id !== newTask.id) {
-            console.log('Task synced with server:', serverTask.id);
-          }
-        })
-        .catch(console.error);
-      
-      return { ...state, tasks: [newTask, ...state.tasks] };
-    
-    case 'UPDATE_TASK':
-      const taskUpdates = state.tasks.map(task =>
-        task.id === action.taskId ? { ...task, ...action.updates } : task
-      );
-      
-      // Sync with Supabase
-      if (action.taskId !== 'welcome-task') {
-        const updatedTask = taskUpdates.find(t => t.id === action.taskId);
-        supabaseService.updateTask(action.taskId, updatedTask).catch(console.error);
-      }
-      
-      return { ...state, tasks: taskUpdates };
-    
-    case 'DELETE_TASK':
-      const filteredTasks = state.tasks.filter(task => task.id !== action.taskId);
-      
-      // Sync with Supabase
-      if (action.taskId !== 'welcome-task') {
-        supabaseService.deleteTask(action.taskId).catch(console.error);
-      }
-      
-      return { ...state, tasks: filteredTasks };
-    
-    case 'ADD_TASK_COMMENT':
-      const tasksWithComment = state.tasks.map(task =>
-        task.id === action.taskId
-          ? {
-              ...task,
-              comments: [
-                ...(task.comments || []),
-                {
-                  id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-                  author: action.author,
-                  content: action.content,
-                  timestamp: new Date().toISOString()
-                }
-              ]
-            }
-          : task
-      );
-      
-      // Sync with Supabase
-      if (action.taskId !== 'welcome-task') {
-        const updatedTask = tasksWithComment.find(t => t.id === action.taskId);
-        supabaseService.updateTask(action.taskId, updatedTask).catch(console.error);
-      }
-      
-      return { ...state, tasks: tasksWithComment };
-    
-    case 'ADD_CONTACT':
-      const newContact = { 
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        name: action.contact.name,
-        email: action.contact.email,
-        phone: action.contact.phone || '',
-        company: action.contact.company,
-        status: action.contact.status,
-        notes: action.contact.notes || []
-      };
-      
-      // Sync with Supabase
-      supabaseService.addContact(newContact)
-        .then(serverContact => {
-          if (serverContact && serverContact.id !== newContact.id) {
-            console.log('Contact synced with server:', serverContact.id);
-          }
-        })
-        .catch(console.error);
-      
-      return { ...state, contacts: [newContact, ...state.contacts] };
-    
-    case 'UPDATE_CONTACT':
-      const updatedContacts = state.contacts.map(contact =>
-        contact.id === action.contactId ? { ...contact, ...action.updates } : contact
-      );
-      
-      // Sync with Supabase
-      const updatedContact = updatedContacts.find(c => c.id === action.contactId);
-      supabaseService.updateContact(action.contactId, updatedContact).catch(console.error);
-      
-      return { ...state, contacts: updatedContacts };
-    
-    case 'DELETE_CONTACT':
-      const filteredContacts = state.contacts.filter(contact => contact.id !== action.contactId);
-      
-      // Sync with Supabase
-      supabaseService.deleteContact(action.contactId).catch(console.error);
-      
-      return { ...state, contacts: filteredContacts };
-    
-    case 'ADD_CONTACT_NOTE':
-      const contactsWithNote = state.contacts.map(contact =>
-        contact.id === action.contactId
-          ? {
-              ...contact,
-              notes: [
-                ...(contact.notes || []),
-                {
-                  id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-                  content: action.content,
-                  timestamp: new Date().toISOString(),
-                  author: action.author
-                }
-              ]
-            }
-          : contact
-      );
-      
-      // Sync with Supabase
-      const contactWithNewNote = contactsWithNote.find(c => c.id === action.contactId);
-      supabaseService.updateContact(action.contactId, contactWithNewNote).catch(console.error);
-      
-      return { ...state, contacts: contactsWithNote };
-    
-    case 'ADD_CHAT_MESSAGE':
-      const newMessage = {
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        author: action.author,
-        content: action.content,
-        timestamp: new Date().toISOString(),
-        edited: false,
-        deleted: false
-      };
-      
-      // Sync with Supabase
-      if (newMessage.id !== 'welcome-message') {
-        supabaseService.addChatMessage(newMessage).catch(console.error);
-      }
-      
+    case 'UPDATE_SYNC_STATUS':
       return {
         ...state,
-        chatMessages: [...state.chatMessages, newMessage]
+        lastSync: action.success ? new Date().toISOString() : state.lastSync,
+        syncErrors: action.error ? 
+          [...state.syncErrors, {
+            error: action.error,
+            operation: action.operation,
+            timestamp: new Date().toISOString()
+          }].slice(-10) : state.syncErrors
       };
+
+    // Enhanced task operations with better error handling
+    case 'MOVE_TASK':
+      try {
+        const updatedTasks = state.tasks.map(task =>
+          task.id === action.taskId ? { ...task, status: action.newStatus } : task
+        );
+        
+        // Async sync with error handling
+        if (action.taskId !== 'welcome-task') {
+          const task = updatedTasks.find(t => t.id === action.taskId);
+          supabaseService.updateTask(action.taskId, task)
+            .then(() => console.log('✅ Task move synced:', action.taskId))
+            .catch(error => {
+              console.error('❌ Task move sync failed:', error);
+              // Could dispatch UPDATE_SYNC_STATUS here
+            });
+        }
+        
+        return { ...state, tasks: updatedTasks };
+      } catch (error) {
+        console.error('❌ Move task failed:', error);
+        return { ...state, error: error.message };
+      }
+    
+    case 'ADD_TASK':
+      try {
+        if (!action.task?.title?.trim()) {
+          throw new Error('Task title is required');
+        }
+
+        const newTask = { 
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          title: action.task.title.trim(),
+          description: action.task.description?.trim() || '',
+          status: action.task.status || 'todo',
+          assignee: action.task.assignee?.trim() || '',
+          dueDate: action.task.dueDate || '',
+          comments: action.task.comments || [],
+          created_at: new Date().toISOString()
+        };
+        
+        // Async sync
+        supabaseService.addTask(newTask)
+          .then(serverTask => {
+            if (serverTask && serverTask.id !== newTask.id) {
+              console.log('✅ Task synced with server:', serverTask.id);
+            }
+          })
+          .catch(error => {
+            console.error('❌ Task sync failed:', error);
+          });
+        
+        return { ...state, tasks: [newTask, ...state.tasks] };
+      } catch (error) {
+        console.error('❌ Add task failed:', error);
+        return { ...state, error: error.message };
+      }
+    
+    case 'UPDATE_TASK':
+      try {
+        if (!action.taskId) {
+          throw new Error('Task ID is required');
+        }
+
+        const taskUpdates = state.tasks.map(task =>
+          task.id === action.taskId ? { 
+            ...task, 
+            ...action.updates,
+            updated_at: new Date().toISOString() 
+          } : task
+        );
+        
+        // Async sync
+        if (action.taskId !== 'welcome-task') {
+          const updatedTask = taskUpdates.find(t => t.id === action.taskId);
+          supabaseService.updateTask(action.taskId, updatedTask)
+            .then(() => console.log('✅ Task update synced:', action.taskId))
+            .catch(error => console.error('❌ Task update sync failed:', error));
+        }
+        
+        return { ...state, tasks: taskUpdates };
+      } catch (error) {
+        console.error('❌ Update task failed:', error);
+        return { ...state, error: error.message };
+      }
+    
+    case 'DELETE_TASK':
+      try {
+        if (!action.taskId) {
+          throw new Error('Task ID is required');
+        }
+
+        const filteredTasks = state.tasks.filter(task => task.id !== action.taskId);
+        
+        // Async sync
+        if (action.taskId !== 'welcome-task') {
+          supabaseService.deleteTask(action.taskId)
+            .then(() => console.log('✅ Task deletion synced:', action.taskId))
+            .catch(error => console.error('❌ Task deletion sync failed:', error));
+        }
+        
+        return { ...state, tasks: filteredTasks };
+      } catch (error) {
+        console.error('❌ Delete task failed:', error);
+        return { ...state, error: error.message };
+      }
+    
+    case 'ADD_TASK_COMMENT':
+      try {
+        if (!action.taskId || !action.content?.trim()) {
+          throw new Error('Task ID and comment content are required');
+        }
+
+        const tasksWithComment = state.tasks.map(task =>
+          task.id === action.taskId
+            ? {
+                ...task,
+                comments: [
+                  ...(task.comments || []),
+                  {
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                    author: action.author || 'Anonymous',
+                    content: action.content.trim(),
+                    timestamp: new Date().toISOString()
+                  }
+                ]
+              }
+            : task
+        );
+        
+        // Async sync
+        if (action.taskId !== 'welcome-task') {
+          const updatedTask = tasksWithComment.find(t => t.id === action.taskId);
+          supabaseService.updateTask(action.taskId, updatedTask)
+            .then(() => console.log('✅ Task comment synced:', action.taskId))
+            .catch(error => console.error('❌ Task comment sync failed:', error));
+        }
+        
+        return { ...state, tasks: tasksWithComment };
+      } catch (error) {
+        console.error('❌ Add task comment failed:', error);
+        return { ...state, error: error.message };
+      }
+    
+    // Enhanced contact operations
+    case 'ADD_CONTACT':
+      try {
+        if (!action.contact?.name?.trim() || !action.contact?.email?.trim()) {
+          throw new Error('Contact name and email are required');
+        }
+
+        const newContact = { 
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          name: action.contact.name.trim(),
+          email: action.contact.email.trim(),
+          phone: action.contact.phone?.trim() || '',
+          company: action.contact.company?.trim() || '',
+          status: action.contact.status || 'Lead',
+          notes: action.contact.notes || [],
+          created_at: new Date().toISOString()
+        };
+        
+        // Async sync
+        supabaseService.addContact(newContact)
+          .then(serverContact => {
+            if (serverContact && serverContact.id !== newContact.id) {
+              console.log('✅ Contact synced with server:', serverContact.id);
+            }
+          })
+          .catch(error => console.error('❌ Contact sync failed:', error));
+        
+        return { ...state, contacts: [newContact, ...state.contacts] };
+      } catch (error) {
+        console.error('❌ Add contact failed:', error);
+        return { ...state, error: error.message };
+      }
+    
+    case 'UPDATE_CONTACT':
+      try {
+        if (!action.contactId) {
+          throw new Error('Contact ID is required');
+        }
+
+        const updatedContacts = state.contacts.map(contact =>
+          contact.id === action.contactId ? { 
+            ...contact, 
+            ...action.updates,
+            updated_at: new Date().toISOString() 
+          } : contact
+        );
+        
+        // Async sync
+        const updatedContact = updatedContacts.find(c => c.id === action.contactId);
+        supabaseService.updateContact(action.contactId, updatedContact)
+          .then(() => console.log('✅ Contact update synced:', action.contactId))
+          .catch(error => console.error('❌ Contact update sync failed:', error));
+        
+        return { ...state, contacts: updatedContacts };
+      } catch (error) {
+        console.error('❌ Update contact failed:', error);
+        return { ...state, error: error.message };
+      }
+    
+    case 'DELETE_CONTACT':
+      try {
+        if (!action.contactId) {
+          throw new Error('Contact ID is required');
+        }
+
+        const filteredContacts = state.contacts.filter(contact => contact.id !== action.contactId);
+        
+        // Async sync
+        supabaseService.deleteContact(action.contactId)
+          .then(() => console.log('✅ Contact deletion synced:', action.contactId))
+          .catch(error => console.error('❌ Contact deletion sync failed:', error));
+        
+        return { ...state, contacts: filteredContacts };
+      } catch (error) {
+        console.error('❌ Delete contact failed:', error);
+        return { ...state, error: error.message };
+      }
+    
+    case 'ADD_CONTACT_NOTE':
+      try {
+        if (!action.contactId || !action.content?.trim()) {
+          throw new Error('Contact ID and note content are required');
+        }
+
+        const contactsWithNote = state.contacts.map(contact =>
+          contact.id === action.contactId
+            ? {
+                ...contact,
+                notes: [
+                  ...(contact.notes || []),
+                  {
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                    content: action.content.trim(),
+                    timestamp: new Date().toISOString(),
+                    author: action.author || 'Anonymous'
+                  }
+                ]
+              }
+            : contact
+        );
+        
+        // Async sync
+        const contactWithNewNote = contactsWithNote.find(c => c.id === action.contactId);
+        supabaseService.updateContact(action.contactId, contactWithNewNote)
+          .then(() => console.log('✅ Contact note synced:', action.contactId))
+          .catch(error => console.error('❌ Contact note sync failed:', error));
+        
+        return { ...state, contacts: contactsWithNote };
+      } catch (error) {
+        console.error('❌ Add contact note failed:', error);
+        return { ...state, error: error.message };
+      }
+    
+    // Enhanced chat operations
+    case 'ADD_CHAT_MESSAGE':
+      try {
+        if (!action.content?.trim() || !action.author?.trim()) {
+          throw new Error('Message content and author are required');
+        }
+
+        const newMessage = {
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          author: action.author.trim(),
+          content: action.content.trim(),
+          timestamp: new Date().toISOString(),
+          edited: false,
+          deleted: false
+        };
+        
+        // Async sync
+        if (newMessage.id !== 'welcome-message') {
+          supabaseService.addChatMessage(newMessage)
+            .then(() => console.log('✅ Chat message synced:', newMessage.id))
+            .catch(error => console.error('❌ Chat message sync failed:', error));
+        }
+        
+        return {
+          ...state,
+          chatMessages: [...state.chatMessages, newMessage]
+        };
+      } catch (error) {
+        console.error('❌ Add chat message failed:', error);
+        return { ...state, error: error.message };
+      }
     
     case 'EDIT_CHAT_MESSAGE':
-      const editedMessages = state.chatMessages.map(msg =>
-        msg.id === action.messageId
-          ? { ...msg, content: action.content, edited: true }
-          : msg
-      );
-      
-      // Sync with Supabase
-      if (action.messageId !== 'welcome-message') {
-        const editedMessage = editedMessages.find(m => m.id === action.messageId);
-        supabaseService.updateChatMessage(action.messageId, editedMessage).catch(console.error);
+      try {
+        if (!action.messageId || !action.content?.trim()) {
+          throw new Error('Message ID and content are required');
+        }
+
+        const editedMessages = state.chatMessages.map(msg =>
+          msg.id === action.messageId
+            ? { 
+                ...msg, 
+                content: action.content.trim(), 
+                edited: true,
+                updated_at: new Date().toISOString()
+              }
+            : msg
+        );
+        
+        // Async sync
+        if (action.messageId !== 'welcome-message') {
+          const editedMessage = editedMessages.find(m => m.id === action.messageId);
+          supabaseService.updateChatMessage(action.messageId, editedMessage)
+            .then(() => console.log('✅ Chat message edit synced:', action.messageId))
+            .catch(error => console.error('❌ Chat message edit sync failed:', error));
+        }
+        
+        return { ...state, chatMessages: editedMessages };
+      } catch (error) {
+        console.error('❌ Edit chat message failed:', error);
+        return { ...state, error: error.message };
       }
-      
-      return { ...state, chatMessages: editedMessages };
     
     case 'DELETE_CHAT_MESSAGE':
-      const deletedMessages = state.chatMessages.map(msg =>
-        msg.id === action.messageId
-          ? { ...msg, deleted: true, content: '' }
-          : msg
-      );
-      
-      // Sync with Supabase
-      if (action.messageId !== 'welcome-message') {
-        const deletedMessage = deletedMessages.find(m => m.id === action.messageId);
-        supabaseService.updateChatMessage(action.messageId, deletedMessage).catch(console.error);
+      try {
+        if (!action.messageId) {
+          throw new Error('Message ID is required');
+        }
+
+        const deletedMessages = state.chatMessages.map(msg =>
+          msg.id === action.messageId
+            ? { 
+                ...msg, 
+                deleted: true, 
+                content: '',
+                updated_at: new Date().toISOString()
+              }
+            : msg
+        );
+        
+        // Async sync
+        if (action.messageId !== 'welcome-message') {
+          const deletedMessage = deletedMessages.find(m => m.id === action.messageId);
+          supabaseService.updateChatMessage(action.messageId, deletedMessage)
+            .then(() => console.log('✅ Chat message deletion synced:', action.messageId))
+            .catch(error => console.error('❌ Chat message deletion sync failed:', error));
+        }
+        
+        return { ...state, chatMessages: deletedMessages };
+      } catch (error) {
+        console.error('❌ Delete chat message failed:', error);
+        return { ...state, error: error.message };
       }
-      
-      return { ...state, chatMessages: deletedMessages };
     
+    // Enhanced team member operations
     case 'ADD_TEAM_MEMBER':
-      const newMember = { 
-        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        name: action.member.name,
-        email: action.member.email,
-        role: action.member.role,
-        avatar: action.member.avatar,
-        status: action.member.status || 'online'
-      };
-      
-      // Sync with Supabase
-      supabaseService.addTeamMember(newMember)
-        .then(serverMember => {
-          if (serverMember && serverMember.id !== newMember.id) {
-            console.log('Team member synced with server:', serverMember.id);
-          }
-        })
-        .catch(console.error);
-      
-      return { ...state, teamMembers: [newMember, ...state.teamMembers] };
+      try {
+        if (!action.member?.name?.trim() || !action.member?.email?.trim()) {
+          throw new Error('Team member name and email are required');
+        }
+
+        const newMember = { 
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          name: action.member.name.trim(),
+          email: action.member.email.trim(),
+          role: action.member.role?.trim() || 'Member',
+          avatar: action.member.avatar || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
+          status: action.member.status || 'online',
+          created_at: new Date().toISOString()
+        };
+        
+        // Async sync
+        supabaseService.addTeamMember(newMember)
+          .then(serverMember => {
+            if (serverMember && serverMember.id !== newMember.id) {
+              console.log('✅ Team member synced with server:', serverMember.id);
+            }
+          })
+          .catch(error => console.error('❌ Team member sync failed:', error));
+        
+        return { ...state, teamMembers: [newMember, ...state.teamMembers] };
+      } catch (error) {
+        console.error('❌ Add team member failed:', error);
+        return { ...state, error: error.message };
+      }
     
     case 'UPDATE_TEAM_MEMBER':
-      const updatedMembers = state.teamMembers.map(member =>
-        member.id === action.memberId ? { ...member, ...action.updates } : member
-      );
-      
-      // Sync with Supabase
-      if (action.memberId !== 'current-user') {
-        const updatedMember = updatedMembers.find(m => m.id === action.memberId);
-        supabaseService.updateTeamMember(action.memberId, updatedMember).catch(console.error);
+      try {
+        if (!action.memberId) {
+          throw new Error('Member ID is required');
+        }
+
+        const updatedMembers = state.teamMembers.map(member =>
+          member.id === action.memberId ? { 
+            ...member, 
+            ...action.updates,
+            updated_at: new Date().toISOString() 
+          } : member
+        );
+        
+        // Async sync
+        if (action.memberId !== 'current-user') {
+          const updatedMember = updatedMembers.find(m => m.id === action.memberId);
+          supabaseService.updateTeamMember(action.memberId, updatedMember)
+            .then(() => console.log('✅ Team member update synced:', action.memberId))
+            .catch(error => console.error('❌ Team member update sync failed:', error));
+        }
+        
+        return { ...state, teamMembers: updatedMembers };
+      } catch (error) {
+        console.error('❌ Update team member failed:', error);
+        return { ...state, error: error.message };
       }
-      
-      return { ...state, teamMembers: updatedMembers };
     
     case 'REMOVE_TEAM_MEMBER':
-      const filteredMembers = state.teamMembers.filter(member => member.id !== action.memberId);
-      
-      // Sync with Supabase
-      if (action.memberId !== 'current-user') {
-        supabaseService.removeTeamMember(action.memberId).catch(console.error);
+      try {
+        if (!action.memberId) {
+          throw new Error('Member ID is required');
+        }
+
+        const filteredMembers = state.teamMembers.filter(member => member.id !== action.memberId);
+        
+        // Async sync
+        if (action.memberId !== 'current-user') {
+          supabaseService.removeTeamMember(action.memberId)
+            .then(() => console.log('✅ Team member removal synced:', action.memberId))
+            .catch(error => console.error('❌ Team member removal sync failed:', error));
+        }
+        
+        return { ...state, teamMembers: filteredMembers };
+      } catch (error) {
+        console.error('❌ Remove team member failed:', error);
+        return { ...state, error: error.message };
       }
-      
-      return { ...state, teamMembers: filteredMembers };
     
     case 'SET_TYPING_USERS':
       return { ...state, typingUsers: action.users };
     
     default:
+      console.warn('⚠️ Unknown action type:', action.type);
       return state;
   }
 }
 
 export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, authError } = useAuth();
 
   // Load user data when authenticated
   useEffect(() => {
@@ -357,59 +576,74 @@ export function AppProvider({ children }) {
     }
 
     console.log('✅ User authenticated, loading data for:', user.email);
-    loadUserDataWithTimeout();
+    loadUserDataWithRetry();
   }, [user, authLoading]);
 
-  const loadUserDataWithTimeout = async () => {
+  // Handle auth errors
+  useEffect(() => {
+    if (authError) {
+      dispatch({ type: 'SET_ERROR', payload: `Authentication Error: ${authError}` });
+    }
+  }, [authError]);
+
+  const loadUserDataWithRetry = async (retryCount = 0) => {
+    const maxRetries = 3;
+    
     if (!user) return;
 
-    console.log('📊 Loading user data from Supabase...');
+    console.log(`📊 Loading user data from Supabase... (attempt ${retryCount + 1})`);
     dispatch({ type: 'SET_LOADING', payload: true });
 
-    // Set a timeout to prevent infinite loading
-    const timeoutId = setTimeout(() => {
-      console.log('⏰ Loading timeout reached, using fallback data');
-      const fallbackData = getInitialData(user);
-      dispatch({ type: 'INITIALIZE_DATA', payload: fallbackData });
-    }, 5000); // 5 second timeout
-
     try {
-      // Load all user data in parallel with shorter timeout
+      // Test connection first
+      const connectionOk = await supabaseService.testConnection();
+      if (!connectionOk && retryCount < maxRetries) {
+        console.log('🔄 Connection failed, retrying...');
+        await new Promise(resolve => setTimeout(resolve, 2000 * (retryCount + 1)));
+        return loadUserDataWithRetry(retryCount + 1);
+      }
+
+      // Load all user data in parallel with individual timeouts
       const dataPromises = [
-        Promise.race([
-          supabaseService.getTasks(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Tasks timeout')), 3000))
-        ]).catch(() => []),
+        supabaseService.getTasks().catch(error => {
+          console.warn('⚠️ Tasks load failed:', error.message);
+          return [];
+        }),
         
-        Promise.race([
-          supabaseService.getContacts(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Contacts timeout')), 3000))
-        ]).catch(() => []),
+        supabaseService.getContacts().catch(error => {
+          console.warn('⚠️ Contacts load failed:', error.message);
+          return [];
+        }),
         
-        Promise.race([
-          supabaseService.getTeamMembers(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Team timeout')), 3000))
-        ]).catch(() => []),
+        supabaseService.getTeamMembers().catch(error => {
+          console.warn('⚠️ Team members load failed:', error.message);
+          return [];
+        }),
         
-        Promise.race([
-          supabaseService.getChatMessages(),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Chat timeout')), 3000))
-        ]).catch(() => [])
+        supabaseService.getChatMessages().catch(error => {
+          console.warn('⚠️ Chat messages load failed:', error.message);
+          return [];
+        })
       ];
 
-      const [tasks, contacts, teamMembers, chatMessages] = await Promise.all(dataPromises);
+      // Set overall timeout
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Overall data loading timeout')), 15000)
+      );
 
-      // Clear timeout since we got data
-      clearTimeout(timeoutId);
+      const [tasks, contacts, teamMembers, chatMessages] = await Promise.race([
+        Promise.all(dataPromises),
+        timeoutPromise
+      ]);
 
-      console.log('📈 Data loaded:', {
+      console.log('📈 Data loaded successfully:', {
         tasks: tasks.length,
         contacts: contacts.length,
         teamMembers: teamMembers.length,
         chatMessages: chatMessages.length
       });
 
-      // If no data exists, use initial data
+      // Use initial data if no data exists
       let userData = {
         tasks: tasks.length > 0 ? tasks : getInitialData(user).tasks,
         contacts: contacts.length > 0 ? contacts : [],
@@ -438,22 +672,38 @@ export function AppProvider({ children }) {
       }));
 
       dispatch({ type: 'INITIALIZE_DATA', payload: userData });
+      dispatch({ type: 'UPDATE_SYNC_STATUS', success: true });
       console.log('✅ User data initialized successfully');
 
     } catch (error) {
-      clearTimeout(timeoutId);
-      console.warn('⚠️ Failed to load user data, using fallback:', error.message);
+      console.error('❌ Failed to load user data:', error);
       
-      // Use fallback data if server fails
+      if (retryCount < maxRetries) {
+        console.log(`🔄 Retrying data load (${retryCount + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, 2000 * (retryCount + 1)));
+        return loadUserDataWithRetry(retryCount + 1);
+      }
+      
+      console.warn('⚠️ Using fallback data after all retries failed');
       const fallbackData = getInitialData(user);
       dispatch({ type: 'INITIALIZE_DATA', payload: fallbackData });
+      dispatch({ type: 'SET_ERROR', payload: `Failed to load data: ${error.message}` });
     }
+  };
+
+  const refreshData = async () => {
+    console.log('🔄 Manual data refresh requested');
+    dispatch({ type: 'CLEAR_ERROR' });
+    await loadUserDataWithRetry();
   };
 
   const value = {
     state,
     dispatch,
-    refreshData: loadUserDataWithTimeout
+    refreshData,
+    isOnline: navigator.onLine,
+    lastSync: state.lastSync,
+    syncErrors: state.syncErrors
   };
 
   return (

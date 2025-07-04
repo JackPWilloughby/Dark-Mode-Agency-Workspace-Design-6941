@@ -16,7 +16,6 @@ export function AuthProvider({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth event:', event);
-        
         if (session?.user) {
           setUser(session.user);
           await loadUserProfile(session.user.id);
@@ -36,7 +35,6 @@ export function AuthProvider({ children }) {
   async function getInitialSession() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      
       if (session?.user) {
         setUser(session.user);
         await loadUserProfile(session.user.id);
@@ -63,10 +61,8 @@ export function AuthProvider({ children }) {
         const newProfile = {
           id: userId,
           email: user.data.user?.email,
-          full_name: user.data.user?.user_metadata?.full_name || 
-                     user.data.user?.email?.split('@')[0] || 'User',
-          avatar_url: user.data.user?.user_metadata?.avatar_url || 
-                      'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
+          full_name: user.data.user?.user_metadata?.full_name || user.data.user?.email?.split('@')[0] || 'User',
+          avatar_url: user.data.user?.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
           role: 'user'
         };
 
@@ -142,7 +138,6 @@ export function AuthProvider({ children }) {
       setLoading(true);
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      
       setUser(null);
       setProfile(null);
     } catch (error) {
