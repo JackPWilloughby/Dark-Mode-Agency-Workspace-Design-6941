@@ -4,6 +4,19 @@ class SupabaseService {
   constructor() {
     this.retryCount = 3;
     this.retryDelay = 1000;
+    
+    // Test connection on initialization
+    this.testConnection()
+      .then(connected => {
+        if (connected) {
+          console.log('🟢 Supabase service initialized successfully');
+        } else {
+          console.warn('🟡 Supabase service initialized with connection issues');
+        }
+      })
+      .catch(err => {
+        console.error('🔴 Supabase service initialization failed:', err);
+      });
   }
 
   // Enhanced error handling
@@ -15,7 +28,7 @@ class SupabaseService {
       hint: error.hint,
       context
     });
-    
+
     // Return a standardized error
     return {
       message: error.message || `Failed to ${operation}`,
@@ -28,16 +41,14 @@ class SupabaseService {
   // Enhanced retry mechanism
   async withRetry(operation, operationName, maxRetries = this.retryCount) {
     let lastError;
-    
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         console.log(`🔄 Attempting ${operationName} (${attempt}/${maxRetries})`);
         const result = await operation();
-        
         if (attempt > 1) {
           console.log(`✅ ${operationName} succeeded on attempt ${attempt}`);
         }
-        
         return result;
       } catch (error) {
         lastError = error;
@@ -50,7 +61,7 @@ class SupabaseService {
         }
       }
     }
-    
+
     throw lastError;
   }
 
@@ -58,17 +69,14 @@ class SupabaseService {
   async getCurrentUserId() {
     try {
       const { data: { user }, error } = await supabase.auth.getUser();
-      
       if (error) {
         console.error('❌ Error getting current user:', error);
         return null;
       }
-      
       if (!user) {
         console.warn('⚠️ No authenticated user found');
         return null;
       }
-      
       return user.id;
     } catch (error) {
       console.error('❌ Exception getting current user:', error);
@@ -81,15 +89,12 @@ class SupabaseService {
     if (!task.title || typeof task.title !== 'string' || task.title.trim().length === 0) {
       throw new Error('Task title is required and must be a non-empty string');
     }
-    
     if (task.status && !['todo', 'doing', 'done'].includes(task.status)) {
       throw new Error('Invalid task status. Must be: todo, doing, or done');
     }
-    
     if (task.dueDate && isNaN(new Date(task.dueDate).getTime())) {
       throw new Error('Invalid due date format');
     }
-    
     return true;
   }
 
@@ -97,15 +102,12 @@ class SupabaseService {
     if (!contact.name || typeof contact.name !== 'string' || contact.name.trim().length === 0) {
       throw new Error('Contact name is required and must be a non-empty string');
     }
-    
     if (!contact.email || typeof contact.email !== 'string' || !contact.email.includes('@')) {
       throw new Error('Valid email address is required');
     }
-    
     if (contact.status && !['Lead', 'Prospect', 'Client', 'Inactive'].includes(contact.status)) {
       throw new Error('Invalid contact status');
     }
-    
     return true;
   }
 
@@ -143,7 +145,6 @@ class SupabaseService {
       };
 
       return await this.withRetry(operation, 'getTasks');
-
     } catch (error) {
       this.handleError(error, 'getTasks', { userId: await this.getCurrentUserId() });
       return []; // Return empty array as fallback
@@ -153,7 +154,6 @@ class SupabaseService {
   async addTask(task) {
     try {
       this.validateTaskData(task);
-      
       const userId = await this.getCurrentUserId();
       if (!userId) {
         throw new Error('No authenticated user');
@@ -187,8 +187,8 @@ class SupabaseService {
       };
 
       const result = await this.withRetry(operation, 'addTask');
-      
       console.log('✅ Task added successfully:', result.id);
+      
       return {
         id: result.id,
         title: result.title,
@@ -198,7 +198,6 @@ class SupabaseService {
         dueDate: result.due_date,
         comments: result.comments || []
       };
-
     } catch (error) {
       this.handleError(error, 'addTask', { task: task.title });
       return task; // Return original task as fallback
@@ -210,9 +209,7 @@ class SupabaseService {
       if (!taskId) {
         throw new Error('Task ID is required');
       }
-
       this.validateTaskData(updates);
-      
       const userId = await this.getCurrentUserId();
       if (!userId) {
         throw new Error('No authenticated user');
@@ -247,10 +244,8 @@ class SupabaseService {
       };
 
       const result = await this.withRetry(operation, 'updateTask');
-      
       console.log('✅ Task updated successfully:', taskId);
       return result;
-
     } catch (error) {
       this.handleError(error, 'updateTask', { taskId, updates });
       return updates; // Return updates as fallback
@@ -262,7 +257,6 @@ class SupabaseService {
       if (!taskId) {
         throw new Error('Task ID is required');
       }
-      
       const userId = await this.getCurrentUserId();
       if (!userId) {
         throw new Error('No authenticated user');
@@ -284,10 +278,8 @@ class SupabaseService {
       };
 
       await this.withRetry(operation, 'deleteTask');
-      
       console.log('✅ Task deleted successfully:', taskId);
       return true;
-
     } catch (error) {
       this.handleError(error, 'deleteTask', { taskId });
       return true; // Return true to allow local deletion
@@ -328,7 +320,6 @@ class SupabaseService {
       };
 
       return await this.withRetry(operation, 'getContacts');
-
     } catch (error) {
       this.handleError(error, 'getContacts', { userId: await this.getCurrentUserId() });
       return [];
@@ -338,7 +329,6 @@ class SupabaseService {
   async addContact(contact) {
     try {
       this.validateContactData(contact);
-      
       const userId = await this.getCurrentUserId();
       if (!userId) {
         throw new Error('No authenticated user');
@@ -372,8 +362,8 @@ class SupabaseService {
       };
 
       const result = await this.withRetry(operation, 'addContact');
-      
       console.log('✅ Contact added successfully:', result.id);
+      
       return {
         id: result.id,
         name: result.name,
@@ -383,7 +373,6 @@ class SupabaseService {
         status: result.status,
         notes: result.notes || []
       };
-
     } catch (error) {
       this.handleError(error, 'addContact', { contact: contact.name });
       return contact;
@@ -395,9 +384,7 @@ class SupabaseService {
       if (!contactId) {
         throw new Error('Contact ID is required');
       }
-
       this.validateContactData(updates);
-      
       const userId = await this.getCurrentUserId();
       if (!userId) {
         throw new Error('No authenticated user');
@@ -432,10 +419,8 @@ class SupabaseService {
       };
 
       const result = await this.withRetry(operation, 'updateContact');
-      
       console.log('✅ Contact updated successfully:', contactId);
       return result;
-
     } catch (error) {
       this.handleError(error, 'updateContact', { contactId, updates });
       return updates;
@@ -447,7 +432,6 @@ class SupabaseService {
       if (!contactId) {
         throw new Error('Contact ID is required');
       }
-      
       const userId = await this.getCurrentUserId();
       if (!userId) {
         throw new Error('No authenticated user');
@@ -469,10 +453,8 @@ class SupabaseService {
       };
 
       await this.withRetry(operation, 'deleteContact');
-      
       console.log('✅ Contact deleted successfully:', contactId);
       return true;
-
     } catch (error) {
       this.handleError(error, 'deleteContact', { contactId });
       return true;
@@ -513,7 +495,6 @@ class SupabaseService {
       };
 
       return await this.withRetry(operation, 'getTeamMembers');
-
     } catch (error) {
       this.handleError(error, 'getTeamMembers', { userId: await this.getCurrentUserId() });
       return [];
@@ -525,7 +506,6 @@ class SupabaseService {
       if (!member.name || !member.email || !member.role) {
         throw new Error('Name, email, and role are required for team members');
       }
-      
       const userId = await this.getCurrentUserId();
       if (!userId) {
         throw new Error('No authenticated user');
@@ -558,8 +538,8 @@ class SupabaseService {
       };
 
       const result = await this.withRetry(operation, 'addTeamMember');
-      
       console.log('✅ Team member added successfully:', result.id);
+      
       return {
         id: result.id,
         name: result.name,
@@ -568,7 +548,6 @@ class SupabaseService {
         avatar: result.avatar,
         status: result.status
       };
-
     } catch (error) {
       this.handleError(error, 'addTeamMember', { member: member.name });
       return member;
@@ -580,7 +559,6 @@ class SupabaseService {
       if (!memberId) {
         throw new Error('Member ID is required');
       }
-      
       const userId = await this.getCurrentUserId();
       if (!userId) {
         throw new Error('No authenticated user');
@@ -614,10 +592,8 @@ class SupabaseService {
       };
 
       const result = await this.withRetry(operation, 'updateTeamMember');
-      
       console.log('✅ Team member updated successfully:', memberId);
       return result;
-
     } catch (error) {
       this.handleError(error, 'updateTeamMember', { memberId, updates });
       return updates;
@@ -629,7 +605,6 @@ class SupabaseService {
       if (!memberId) {
         throw new Error('Member ID is required');
       }
-      
       const userId = await this.getCurrentUserId();
       if (!userId) {
         throw new Error('No authenticated user');
@@ -651,10 +626,8 @@ class SupabaseService {
       };
 
       await this.withRetry(operation, 'removeTeamMember');
-      
       console.log('✅ Team member removed successfully:', memberId);
       return true;
-
     } catch (error) {
       this.handleError(error, 'removeTeamMember', { memberId });
       return true;
@@ -695,7 +668,6 @@ class SupabaseService {
       };
 
       return await this.withRetry(operation, 'getChatMessages');
-
     } catch (error) {
       this.handleError(error, 'getChatMessages', { userId: await this.getCurrentUserId() });
       return [];
@@ -707,7 +679,6 @@ class SupabaseService {
       if (!message.author || !message.content) {
         throw new Error('Author and content are required for chat messages');
       }
-      
       const userId = await this.getCurrentUserId();
       if (!userId) {
         throw new Error('No authenticated user');
@@ -739,8 +710,8 @@ class SupabaseService {
       };
 
       const result = await this.withRetry(operation, 'addChatMessage');
-      
       console.log('✅ Chat message added successfully:', result.id);
+      
       return {
         id: result.id,
         author: result.author,
@@ -749,7 +720,6 @@ class SupabaseService {
         edited: result.edited,
         deleted: result.deleted
       };
-
     } catch (error) {
       this.handleError(error, 'addChatMessage', { message: message.content });
       return message;
@@ -761,7 +731,6 @@ class SupabaseService {
       if (!messageId) {
         throw new Error('Message ID is required');
       }
-      
       const userId = await this.getCurrentUserId();
       if (!userId) {
         throw new Error('No authenticated user');
@@ -793,10 +762,8 @@ class SupabaseService {
       };
 
       const result = await this.withRetry(operation, 'updateChatMessage');
-      
       console.log('✅ Chat message updated successfully:', messageId);
       return result;
-
     } catch (error) {
       this.handleError(error, 'updateChatMessage', { messageId, updates });
       return updates;
@@ -807,7 +774,6 @@ class SupabaseService {
   async testConnection() {
     try {
       console.log('🔍 Testing Supabase connection...');
-      
       const { error } = await Promise.race([
         supabase
           .from('user_profiles_pulse_2024')
@@ -817,12 +783,12 @@ class SupabaseService {
           setTimeout(() => reject(new Error('Connection test timeout')), 5000)
         )
       ]);
-      
+
       if (error) {
         console.error('❌ Supabase connection test failed:', error);
         return false;
       }
-      
+
       console.log('✅ Supabase connection successful');
       return true;
     } catch (error) {
@@ -834,13 +800,12 @@ class SupabaseService {
   async healthCheck() {
     try {
       console.log('🏥 Running health check...');
-      
       const checks = {
         connection: await this.testConnection(),
         auth: !!(await this.getCurrentUserId()),
         timestamp: new Date().toISOString()
       };
-      
+
       console.log('🏥 Health check results:', checks);
       return checks;
     } catch (error) {

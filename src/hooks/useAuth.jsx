@@ -21,10 +21,10 @@ export function AuthProvider({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (!mounted) return;
-        
+
         console.log('🔐 Auth event:', event, session?.user?.email);
         setAuthError(null); // Clear any previous auth errors
-        
+
         if (event === 'SIGNED_OUT') {
           console.log('🚪 User signed out - clearing state');
           setUser(null);
@@ -33,7 +33,7 @@ export function AuthProvider({ children }) {
           setInitializing(false);
           return;
         }
-        
+
         if (session?.user) {
           console.log('👤 User authenticated:', session.user.email);
           setUser(session.user);
@@ -50,7 +50,7 @@ export function AuthProvider({ children }) {
           setUser(null);
           setProfile(null);
         }
-        
+
         setLoading(false);
         setInitializing(false);
       }
@@ -69,19 +69,18 @@ export function AuthProvider({ children }) {
     try {
       console.log('🚀 Initializing auth...');
       setAuthError(null);
-      
+
       // Get current session with timeout
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Auth initialization timeout')), 10000)
       );
       
       const authPromise = supabase.auth.getSession();
-      
       const { data: { session }, error } = await Promise.race([
         authPromise,
         timeoutPromise
       ]);
-      
+
       if (error) {
         console.error('❌ Session error:', error);
         setAuthError(error.message);
@@ -97,7 +96,6 @@ export function AuthProvider({ children }) {
       } else {
         console.log('ℹ️ No existing session found');
       }
-      
     } catch (error) {
       console.error('❌ Auth initialization failed:', error);
       setAuthError(error.message);
@@ -117,17 +115,17 @@ export function AuthProvider({ children }) {
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Profile loading timeout')), 8000)
       );
-      
+
       // Try to get existing profile
       const profilePromise = supabase
         .from('user_profiles_pulse_2024')
         .select('*')
         .eq('id', user.id)
         .single();
-      
+
       let profile;
       let error;
-      
+
       try {
         const result = await Promise.race([profilePromise, timeoutPromise]);
         profile = result.data;
@@ -159,10 +157,8 @@ export function AuthProvider({ children }) {
 
       setProfile(profile);
       return profile;
-      
     } catch (error) {
       console.error('❌ Error loading user profile:', error);
-      
       if (retryCount < maxRetries) {
         console.log(`🔄 Retrying profile load (${retryCount + 1}/${maxRetries})`);
         await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
@@ -193,7 +189,9 @@ export function AuthProvider({ children }) {
           .insert([newProfile])
           .select()
           .single(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Profile creation timeout')), 5000))
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Profile creation timeout')), 5000)
+        )
       ]);
 
       if (insertError) {
@@ -203,7 +201,6 @@ export function AuthProvider({ children }) {
 
       console.log('✅ Profile created successfully');
       return data;
-      
     } catch (error) {
       console.warn('⚠️ Profile creation failed:', error.message);
       return createFallbackProfile(user);
@@ -230,16 +227,21 @@ export function AuthProvider({ children }) {
 
     try {
       console.log('🔄 Updating profile for:', user.email);
-      
+
       // Update in Supabase with timeout and retry
       const { data, error } = await Promise.race([
         supabase
           .from('user_profiles_pulse_2024')
-          .update({ ...updates, updated_at: new Date().toISOString() })
+          .update({
+            ...updates,
+            updated_at: new Date().toISOString()
+          })
           .eq('id', user.id)
           .select()
           .single(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Profile update timeout')), 8000))
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Profile update timeout')), 8000)
+        )
       ]);
 
       if (error) {
@@ -253,7 +255,6 @@ export function AuthProvider({ children }) {
       console.log('✅ Profile updated successfully');
       setProfile(data);
       return { data, error: null };
-      
     } catch (error) {
       console.error('❌ Profile update exception:', error);
       // Update local state anyway
@@ -268,7 +269,7 @@ export function AuthProvider({ children }) {
       setLoading(true);
       setAuthError(null);
       console.log('📝 Signing up user:', email);
-      
+
       const { data, error } = await Promise.race([
         supabase.auth.signUp({
           email: email.trim(),
@@ -279,18 +280,19 @@ export function AuthProvider({ children }) {
             }
           }
         }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Signup timeout - please try again')), 15000))
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Signup timeout - please try again')), 15000)
+        )
       ]);
-      
+
       if (error) {
         console.error('❌ Sign up error:', error);
         setAuthError(error.message);
         return { data: null, error };
       }
-      
+
       console.log('✅ Sign up successful');
       return { data, error: null };
-      
     } catch (error) {
       console.error('❌ Sign up exception:', error);
       const errorMessage = error.message || 'Sign up failed - please try again';
@@ -306,24 +308,25 @@ export function AuthProvider({ children }) {
       setLoading(true);
       setAuthError(null);
       console.log('🔑 Signing in user:', email);
-      
+
       const { data, error } = await Promise.race([
         supabase.auth.signInWithPassword({
           email: email.trim(),
           password
         }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Sign in timeout - please try again')), 15000))
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Sign in timeout - please try again')), 15000)
+        )
       ]);
-      
+
       if (error) {
         console.error('❌ Sign in error:', error);
         setAuthError(error.message);
         return { data: null, error };
       }
-      
+
       console.log('✅ Sign in successful');
       return { data, error: null };
-      
     } catch (error) {
       console.error('❌ Sign in exception:', error);
       const errorMessage = error.message || 'Sign in failed - please try again';
@@ -338,15 +341,16 @@ export function AuthProvider({ children }) {
     try {
       console.log('👋 Signing out user...');
       setAuthError(null);
-      
+
       // Sign out with timeout
       await Promise.race([
         supabase.auth.signOut(),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Sign out timeout')), 5000))
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Sign out timeout')), 5000)
+        )
       ]);
-      
+
       console.log('✅ Sign out successful');
-      
     } catch (error) {
       console.error('❌ Sign out error:', error);
       // Force clear state even if sign out fails
@@ -363,12 +367,12 @@ export function AuthProvider({ children }) {
         .from('user_profiles_pulse_2024')
         .select('id')
         .limit(1);
-      
+
       if (error) {
         console.error('❌ Connection test failed:', error);
         return false;
       }
-      
+
       console.log('✅ Connection test successful');
       return true;
     } catch (error) {
