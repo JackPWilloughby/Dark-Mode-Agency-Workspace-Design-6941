@@ -2,6 +2,8 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import UserDropdown from './UserDropdown';
+import WorkspaceSelector from '../workspace/WorkspaceSelector';
+import { useApp } from '../../context/AppContext';
 import * as FiIcons from 'react-icons/fi';
 import SafeIcon from '../../common/SafeIcon';
 
@@ -9,7 +11,7 @@ const { FiGrid, FiUsers, FiMessageSquare, FiUser, FiChevronLeft, FiChevronRight 
 
 const menuItems = [
   { id: 'tasks', label: 'Tasks', icon: FiGrid, path: '/tasks' },
-  { id: 'contacts', label: 'Contacts', icon: FiUsers, path: '/contacts' },
+  { id: 'contacts', label: 'CRM', icon: FiUsers, path: '/contacts' },
   { id: 'chat', label: 'Chat', icon: FiMessageSquare, path: '/chat' },
   { id: 'team', label: 'Team', icon: FiUser, path: '/team' }
 ];
@@ -17,6 +19,12 @@ const menuItems = [
 function Sidebar({ collapsed, setCollapsed }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { refreshData } = useApp();
+
+  const handleWorkspaceChange = () => {
+    // Refresh all data when workspace changes
+    refreshData();
+  };
 
   return (
     <motion.div
@@ -43,19 +51,21 @@ function Sidebar({ collapsed, setCollapsed }) {
           onClick={() => setCollapsed(!collapsed)}
           className="p-1 rounded-lg hover:bg-gray-700 transition-colors"
         >
-          <SafeIcon
-            icon={collapsed ? FiChevronRight : FiChevronLeft}
-            className="w-5 h-5 text-gray-400"
-          />
+          <SafeIcon icon={collapsed ? FiChevronRight : FiChevronLeft} className="w-5 h-5 text-gray-400" />
         </button>
       </div>
+
+      {/* Workspace Selector */}
+      {!collapsed && (
+        <div className="p-4 border-b border-gray-700">
+          <WorkspaceSelector onWorkspaceChange={handleWorkspaceChange} />
+        </div>
+      )}
 
       {/* Navigation */}
       <nav className="flex-1 p-2 space-y-1">
         {menuItems.map((item) => {
-          const isActive = location.pathname === item.path || 
-            (location.pathname === '/' && item.path === '/tasks');
-
+          const isActive = location.pathname === item.path || (location.pathname === '/' && item.path === '/tasks');
           return (
             <motion.button
               key={item.id}

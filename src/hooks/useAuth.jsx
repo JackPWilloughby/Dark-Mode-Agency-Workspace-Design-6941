@@ -37,12 +37,12 @@ export function AuthProvider({ children }) {
         if (session?.user) {
           console.log('👤 User authenticated:', session.user.email);
           setUser(session.user);
-          
+
           // Clear any existing profile timeout
           if (profileTimeout) {
             clearTimeout(profileTimeout);
           }
-          
+
           // Load profile with retry mechanism
           await loadUserProfileWithRetry(session.user);
         } else {
@@ -71,10 +71,10 @@ export function AuthProvider({ children }) {
       setAuthError(null);
 
       // Get current session with timeout
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Auth initialization timeout')), 10000)
       );
-      
+
       const authPromise = supabase.auth.getSession();
       const { data: { session }, error } = await Promise.race([
         authPromise,
@@ -107,12 +107,12 @@ export function AuthProvider({ children }) {
 
   async function loadUserProfileWithRetry(user, retryCount = 0) {
     const maxRetries = 3;
-    
+
     try {
       console.log(`👤 Loading profile for: ${user.email} (attempt ${retryCount + 1})`);
-      
+
       // Set timeout for profile loading
-      const timeoutPromise = new Promise((_, reject) => 
+      const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error('Profile loading timeout')), 8000)
       );
 
@@ -164,7 +164,7 @@ export function AuthProvider({ children }) {
         await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
         return await loadUserProfileWithRetry(user, retryCount + 1);
       }
-      
+
       // Final fallback
       const fallbackProfile = createFallbackProfile(user);
       setProfile(fallbackProfile);
@@ -180,6 +180,7 @@ export function AuthProvider({ children }) {
         full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
         avatar_url: user.user_metadata?.avatar_url || 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
         role: 'user',
+        current_workspace_id: null, // Will be set when workspace is created
         created_at: new Date().toISOString()
       };
 
@@ -189,7 +190,7 @@ export function AuthProvider({ children }) {
           .insert([newProfile])
           .select()
           .single(),
-        new Promise((_, reject) => 
+        new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Profile creation timeout')), 5000)
         )
       ]);
@@ -214,6 +215,7 @@ export function AuthProvider({ children }) {
       full_name: user.email?.split('@')[0] || 'User',
       avatar_url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face',
       role: 'user',
+      current_workspace_id: null,
       created_at: new Date().toISOString()
     };
   }
@@ -239,7 +241,7 @@ export function AuthProvider({ children }) {
           .eq('id', user.id)
           .select()
           .single(),
-        new Promise((_, reject) => 
+        new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Profile update timeout')), 8000)
         )
       ]);
@@ -280,7 +282,7 @@ export function AuthProvider({ children }) {
             }
           }
         }),
-        new Promise((_, reject) => 
+        new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Signup timeout - please try again')), 15000)
         )
       ]);
@@ -314,7 +316,7 @@ export function AuthProvider({ children }) {
           email: email.trim(),
           password
         }),
-        new Promise((_, reject) => 
+        new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Sign in timeout - please try again')), 15000)
         )
       ]);
@@ -345,7 +347,7 @@ export function AuthProvider({ children }) {
       // Sign out with timeout
       await Promise.race([
         supabase.auth.signOut(),
-        new Promise((_, reject) => 
+        new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Sign out timeout')), 5000)
         )
       ]);
